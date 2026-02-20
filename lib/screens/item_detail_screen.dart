@@ -5,11 +5,12 @@ import '../widgets/polaroid_item_card.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final Map<String, dynamic> item;
-  final void Function(String id) onToggleFavorite;
+  final VoidCallback onToggleFavorite;
+
+  /// Fija / toggle del filtro global.
   final void Function(String type, String value) onTagTap;
 
-  // Para "recomendados" en Detalle (solo si es favorito)
-  final List<Map<String, dynamic>> allItems;
+  /// Estado inicial del filtro activo (para reflejar selección).
   final String? activeTagType;
   final String? activeTagValue;
 
@@ -18,9 +19,8 @@ class ItemDetailScreen extends StatefulWidget {
     required this.item,
     required this.onToggleFavorite,
     required this.onTagTap,
-    required this.allItems,
-    required this.activeTagType,
-    required this.activeTagValue,
+    this.activeTagType,
+    this.activeTagValue,
   });
 
   @override
@@ -31,156 +31,38 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   bool _flipped = false;
   late bool _isFav;
 
-  // ✅ estado visual del último tag tocado en Detalle
-  String? _selectedTagType; // 'type' | 'age' | 'cond'
-  String? _selectedTagValue;
+  String? _activeTagType;
+  String? _activeTagValue;
 
   @override
   void initState() {
     super.initState();
     _isFav = (widget.item['fav'] as bool?) ?? false;
+    _activeTagType = widget.activeTagType;
+    _activeTagValue = widget.activeTagValue;
   }
 
   void _flip() => setState(() => _flipped = !_flipped);
 
   void _toggleFav() {
-    final id = widget.item['id']?.toString();
-    if (id == null) return;
-
-    widget.onToggleFavorite(id);
-
+    widget.onToggleFavorite();
     setState(() {
       _isFav = (widget.item['fav'] as bool?) ?? false;
     });
   }
 
-  void _handleTagTap(String type, String value) {
+  void _toggleTag(String type, String value) {
     setState(() {
-      _selectedTagType = type;
-      _selectedTagValue = value;
-    });
-    widget.onTagTap(type, value);
-  }
-
-  List<Map<String, dynamic>> _computeRecommended() {
-    final curId = widget.item['id']?.toString();
-    final curType = widget.item['type']?.toString();
-    final curAge = widget.item['age']?.toString();
-    final curCond = widget.item['cond']?.toString();
-    final curSize = widget.item['size']?.toString();
-
-    final activeType = widget.activeTagType;
-    final activeValue = widget.activeTagValue;
-
-    int score(Map<String, dynamic> it) {
-      int s = 0;
-      if (curType != null && it['type']?.toString() == curType) s += 3;
-      if (curAge != null && it['age']?.toString() == curAge) s += 2;
-      if (curSize != null && it['size']?.toString() == curSize) s += 2;
-      if (curCond != null && it['cond']?.toString() == curCond) s += 1;
-
-      // Refuerzo: si venís de un filtro activo, empuja coincidencias
-      if (activeType != null && activeValue != null) {
-        if (it[activeType]?.toString() == activeValue) s += 2;
+      if (_activeTagType == type && _activeTagValue == value) {
+        _activeTagType = null;
+        _activeTagValue = null;
+      } else {
+        _activeTagType = type;
+        _activeTagValue = value;
       }
+    });
 
-      // Refuerzo: señales orgánicas (q)
-      final q = (it['q'] is int) ? it['q'] as int : int.tryParse('${it['q']}') ?? 0;
-      if (q >= 10) s += 1;
-
-      return s;
-    }
-
-    final candidates = widget.allItems
-        .where((it) => it['id']?.toString() != curId)
-        .toList();
-
-    candidates.sort((a, b) => score(b).compareTo(score(a)));
-
-    final top = <Map<String, dynamic>>[];
-    for (final it in candidates) {
-      if (score(it) <= 0) continue;
-      top.add(it);
-      if (top.length == 3) break;
-    }
-    return top;
-  }
-
-  Widget _buildRecommendedSection() {
-    if (!_isFav) return const SizedBox.shrink();
-
-    final rec = _computeRecommended();
-    if (rec.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'recomendados',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-              color: Colors.black.withOpacity(0.8),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 210,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              itemCount: rec.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, i) {
-                final it = rec[i];
-
-                return SizedBox(
-                  width: 170,
-                  child: PolaroidItemCard(
-                    imageUrl: it['image'] as String,
-                    priceText: it['price'] as String,
-                    badgeText: it['badge'] as String?,
-                    isFavorited: (it['fav'] as bool?) == true,
-                    onFavoriteTap: () {
-                      final rid = it['id']?.toString();
-                      if (rid == null) return;
-                      widget.onToggleFavorite(rid);
-                      setState(() {}); // por si cambia un ícono mientras estás acá
-                    },
-                    typeText: it['type'] as String,
-                    ageText: it['age'] as String,
-                    conditionText: it['cond'] as String,
-                    onTypeTap: () => _handleTagTap('type', it['type'] as String),
-                    onAgeTap: () => _handleTagTap('age', it['age'] as String),
-                    onConditionTap: () => _handleTagTap('cond', it['cond'] as String),
-                    onOpen: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ItemDetailScreen(
-                            item: it,
-                            onToggleFavorite: widget.onToggleFavorite,
-                            onTagTap: widget.onTagTap,
-                            allItems: widget.allItems,
-                            activeTagType: widget.activeTagType,
-                            activeTagValue: widget.activeTagValue,
-                          ),
-                        ),
-                      );
-                      setState(() {
-                        _isFav = (widget.item['fav'] as bool?) ?? false;
-                      });
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
+    widget.onTagTap(type, value);
   }
 
   @override
@@ -202,6 +84,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final int q = item['q'] as int;
     final String last = item['last'] as String;
     final String note = (item['note'] as String?) ?? '';
+
+    final bool typeSel = _activeTagType == 'type' && _activeTagValue == typeText;
+    final bool ageSel = _activeTagType == 'age' && _activeTagValue == ageText;
+    final bool condSel = _activeTagType == 'cond' && _activeTagValue == condText;
 
     return Scaffold(
       appBar: AppBar(
@@ -254,7 +140,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 questionsCount: q,
                                 lastActivityText: last,
                                 note: note,
-                                recommended: _buildRecommendedSection(),
                               ),
                             )
                           : _FrontFull(
@@ -264,11 +149,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               typeText: typeText,
                               ageText: ageText,
                               condText: condText,
-                              selectedTagType: _selectedTagType,
-                              selectedTagValue: _selectedTagValue,
-                              onTypeTap: () => _handleTagTap('type', typeText),
-                              onAgeTap: () => _handleTagTap('age', ageText),
-                              onCondTap: () => _handleTagTap('cond', condText),
+                              typeSelected: typeSel,
+                              ageSelected: ageSel,
+                              condSelected: condSel,
+                              onTypeTap: () => _toggleTag('type', typeText),
+                              onAgeTap: () => _toggleTag('age', ageText),
+                              onCondTap: () => _toggleTag('cond', condText),
                             ),
                     );
                   },
@@ -291,8 +177,9 @@ class _FrontFull extends StatelessWidget {
   final String ageText;
   final String condText;
 
-  final String? selectedTagType;
-  final String? selectedTagValue;
+  final bool typeSelected;
+  final bool ageSelected;
+  final bool condSelected;
 
   final VoidCallback onTypeTap;
   final VoidCallback onAgeTap;
@@ -305,8 +192,9 @@ class _FrontFull extends StatelessWidget {
     required this.typeText,
     required this.ageText,
     required this.condText,
-    required this.selectedTagType,
-    required this.selectedTagValue,
+    required this.typeSelected,
+    required this.ageSelected,
+    required this.condSelected,
     required this.onTypeTap,
     required this.onAgeTap,
     required this.onCondTap,
@@ -315,9 +203,6 @@ class _FrontFull extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const radius = 22.0;
-
-    final selType = selectedTagType;
-    final selVal = selectedTagValue;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
@@ -367,20 +252,23 @@ class _FrontFull extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _Tag(
+                  BurstTagPill(
                     text: typeText,
+                    selected: typeSelected,
                     onTap: onTypeTap,
-                    selected: selType == 'type' && selVal == typeText,
+                    maxWidth: 160,
                   ),
-                  _Tag(
+                  BurstTagPill(
                     text: ageText,
+                    selected: ageSelected,
                     onTap: onAgeTap,
-                    selected: selType == 'age' && selVal == ageText,
+                    maxWidth: 160,
                   ),
-                  _Tag(
+                  BurstTagPill(
                     text: condText,
+                    selected: condSelected,
                     onTap: onCondTap,
-                    selected: selType == 'cond' && selVal == condText,
+                    maxWidth: 200,
                   ),
                 ],
               ),
@@ -422,8 +310,6 @@ class _BackFull extends StatelessWidget {
 
   final String note;
 
-  final Widget recommended;
-
   const _BackFull({
     required this.titleShort,
     required this.statusText,
@@ -434,7 +320,6 @@ class _BackFull extends StatelessWidget {
     required this.questionsCount,
     required this.lastActivityText,
     required this.note,
-    required this.recommended,
   });
 
   @override
@@ -573,8 +458,6 @@ class _BackFull extends StatelessWidget {
                   style: const TextStyle(fontSize: 13, height: 1.25),
                 ),
               ),
-              // ✅ Recomendados (solo si es favorito)
-              recommended,
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -593,8 +476,6 @@ class _BackFull extends StatelessWidget {
   }
 }
 
-/* ---------------- UI helpers (idénticos al original) ---------------- */
-
 class _Field extends StatelessWidget {
   final String label;
   final String value;
@@ -611,13 +492,14 @@ class _Field extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 160,
+      width: 220,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: labelStyle),
-          const SizedBox(height: 6),
-          Text(value, style: valueStyle),
+          const SizedBox(height: 4),
+          Text(value,
+              style: valueStyle, maxLines: 2, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -638,14 +520,14 @@ class _MiniStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.03),
+        color: Colors.black.withOpacity(0.04),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Colors.black.withOpacity(0.65)),
+          Icon(icon, size: 18, color: Colors.black.withOpacity(0.6)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -653,12 +535,10 @@ class _MiniStat extends StatelessWidget {
               children: [
                 Text(label,
                     style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.4,
-                      color: Colors.black.withOpacity(0.65),
-                    )),
-                const SizedBox(height: 6),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black.withOpacity(0.65))),
+                const SizedBox(height: 4),
                 Text(value,
                     style: const TextStyle(
                         fontSize: 13, fontWeight: FontWeight.w800)),
@@ -680,65 +560,17 @@ class _PillWhite extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withOpacity(0.92),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
         style: TextStyle(
-          fontWeight: bold ? FontWeight.w900 : FontWeight.w800,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
-}
-
-class _Tag extends StatelessWidget {
-  final String text;
-  final VoidCallback onTap;
-  final bool selected;
-
-  const _Tag({
-    required this.text,
-    required this.onTap,
-    this.selected = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(999),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? cs.primary.withOpacity(0.12) : Colors.black.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected ? cs.primary.withOpacity(0.55) : Colors.black.withOpacity(0.08),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (selected) ...[
-              Icon(Icons.check_circle, size: 16, color: cs.primary),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              text,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: selected ? cs.primary : Colors.black87,
-              ),
-            ),
-          ],
+          fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+          fontSize: 14,
+          color: Colors.black87,
         ),
       ),
     );

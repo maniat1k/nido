@@ -189,14 +189,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openFavorites() {
-    // ✅ SIEMPRE abre: si no hay favoritos, FavoritesScreen muestra vacío
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => FavoritesScreen(
           items: _items,
           onToggleFavorite: _toggleFavorite,
           onTagTap: (type, value) => _setTagFilter(type: type, value: value),
-),
+          activeTagType: _activeTagType,
+          activeTagValue: _activeTagValue,
+        ),
       ),
     );
   }
@@ -223,9 +224,8 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(
         builder: (_) => ItemDetailScreen(
           item: item,
-          onToggleFavorite: _toggleFavorite,
+          onToggleFavorite: () => _toggleFavorite(item['id'] as String),
           onTagTap: (type, value) => _setTagFilter(type: type, value: value),
-          allItems: _items,
           activeTagType: _activeTagType,
           activeTagValue: _activeTagValue,
         ),
@@ -251,7 +251,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: TextButton.icon(
-              onPressed: _openFavorites, // ✅ no se pinta, no togglear
+              onPressed: _openFavorites,
               icon: const Icon(Icons.favorite_border),
               label: Text('($_favCount)'),
             ),
@@ -264,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
         label: const Text('Publicar'),
       ),
       body: GestureDetector(
-        behavior: HitTestBehavior.deferToChild, // ✅ sólo capta taps “vacíos”
+        behavior: HitTestBehavior.deferToChild, // ✅ tap “vacío” = limpiar filtro
         onTap: _clearFilterIfActive,
         child: LayoutBuilder(
           builder: (context, c) {
@@ -295,6 +295,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   typeText: item['type'] as String,
                   ageText: item['age'] as String,
                   conditionText: item['cond'] as String,
+                  typeSelected: _activeTagType == 'type' &&
+                      _activeTagValue == (item['type'] as String),
+                  ageSelected: _activeTagType == 'age' &&
+                      _activeTagValue == (item['age'] as String),
+                  conditionSelected: _activeTagType == 'cond' &&
+                      _activeTagValue == (item['cond'] as String),
                   onTypeTap: () => _setTagFilter(
                       type: 'type', value: item['type'] as String),
                   onAgeTap: () => _setTagFilter(
