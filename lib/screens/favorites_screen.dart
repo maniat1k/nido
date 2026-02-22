@@ -151,20 +151,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       isFavorited: (it['fav'] as bool?) == true,
                       onFavoriteTap: () =>
                           _toggleFavAndRefresh(it['id'] as String),
-                      typeText: it['type'] as String,
-                      ageText: it['age'] as String,
-                      conditionText: it['cond'] as String,
-                      typeSelected: _activeTagType == 'type' &&
-                          _activeTagValue == (it['type'] as String),
-                      ageSelected: _activeTagType == 'age' &&
-                          _activeTagValue == (it['age'] as String),
-                      conditionSelected: _activeTagType == 'cond' &&
-                          _activeTagValue == (it['cond'] as String),
-                      onTypeTap: () =>
-                          _setTagFilter('type', it['type'] as String),
-                      onAgeTap: () => _setTagFilter('age', it['age'] as String),
-                      onConditionTap: () =>
-                          _setTagFilter('cond', it['cond'] as String),
                       isFocused: _matchesActiveTag(it),
                       onOpen: () => _openDetail(it),
                     );
@@ -189,7 +175,8 @@ class _EmptyFavorites extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
+              //color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(18),
               boxShadow: const [
                 BoxShadow(
@@ -203,7 +190,7 @@ class _EmptyFavorites extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.favorite_border,
-                    size: 44, color: Colors.black.withOpacity(0.55)),
+                    size: 44, color: Colors.black.withValues(alpha: 0.55)),
                 const SizedBox(height: 12),
                 const Text(
                   'Todavía no tenés favoritos',
@@ -216,7 +203,7 @@ class _EmptyFavorites extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     height: 1.35,
-                    color: Colors.black.withOpacity(0.7),
+                    color: Colors.black.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
