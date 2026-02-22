@@ -6,13 +6,21 @@ import 'item_detail_screen.dart';
 class FavoritesScreen extends StatefulWidget {
   final List<Map<String, dynamic>> items;
   final void Function(String id) onToggleFavorite;
+
+  /// Callback global (Home) para fijar / toggle del filtro activo
   final void Function(String type, String value) onTagTap;
+
+  /// Estado inicial del filtro activo (para reflejar selección al entrar)
+  final String? activeTagType;
+  final String? activeTagValue;
 
   const FavoritesScreen({
     super.key,
     required this.items,
     required this.onToggleFavorite,
     required this.onTagTap,
+    this.activeTagType,
+    this.activeTagValue,
   });
 
   @override
@@ -20,16 +28,66 @@ class FavoritesScreen extends StatefulWidget {
 }
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
+  String? _activeTagType;
+  String? _activeTagValue;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeTagType = widget.activeTagType;
+    _activeTagValue = widget.activeTagValue;
+  }
+
   List<Map<String, dynamic>> _favsNow() {
     return widget.items.where((e) => (e['fav'] as bool?) == true).toList();
   }
 
   void _toggleFavAndRefresh(String id) {
     widget.onToggleFavorite(id);
-    // ✅ clave: forzar rebuild para que:
-    // - el corazón se despinte
-    // - el ítem salga de la grilla si ya no es favorito
     setState(() {});
+  }
+
+  void _setTagFilter(String type, String value) {
+    setState(() {
+      if (_activeTagType == type && _activeTagValue == value) {
+        _activeTagType = null;
+        _activeTagValue = null;
+      } else {
+        _activeTagType = type;
+        _activeTagValue = value;
+      }
+    });
+
+    // ✅ persistir en Home (filtro global)
+    widget.onTagTap(type, value);
+  }
+
+  void _clearFilterIfActive() {
+    if (_activeTagType == null || _activeTagValue == null) return;
+    final oldType = _activeTagType!;
+    final oldValue = _activeTagValue!;
+
+    setState(() {
+      _activeTagType = null;
+      _activeTagValue = null;
+    });
+
+    // ✅ limpiar también el filtro global (Home) toggleando el mismo valor
+    widget.onTagTap(oldType, oldValue);
+  }
+
+  bool _matchesActiveTag(Map<String, dynamic> item) {
+    if (_activeTagType == null || _activeTagValue == null) return false;
+    switch (_activeTagType) {
+      case 'type':
+        return item['type'] == _activeTagValue;
+      case 'age':
+        return item['age'] == _activeTagValue;
+      case 'cond':
+        return item['cond'] == _activeTagValue;
+      default:
+        return false;
+    }
   }
 
   Future<void> _openDetail(Map<String, dynamic> it) async {
@@ -37,16 +95,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       MaterialPageRoute(
         builder: (_) => ItemDetailScreen(
           item: it,
-          onToggleFavorite: widget.onToggleFavorite,
-          onTagTap: widget.onTagTap,
-          allItems: widget.items,
-          activeTagType: null,
-          activeTagValue: null,
+          onToggleFavorite: () => widget.onToggleFavorite(it['id'] as String),
+          onTagTap: (t, v) => _setTagFilter(t, v),
+          activeTagType: _activeTagType,
+          activeTagValue: _activeTagValue,
         ),
       ),
     );
 
-    // ✅ clave: si en Detalle se quitó el favorito, al volver debe desaparecer
     setState(() {});
   }
 
@@ -58,6 +114,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       backgroundColor: const Color(0xFFF8EFF4),
       appBar: AppBar(
         title: const Text('Favoritos'),
+        actions: [
+          if (_activeTagType != null && _activeTagValue != null)
+            IconButton(
+              tooltip: 'Quitar filtro',
+              icon: const Icon(Icons.filter_alt_off),
+              onPressed: _clearFilterIfActive,
+            ),
+        ],
       ),
       body: favs.isEmpty
           ? const _EmptyFavorites()
@@ -87,13 +151,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       isFavorited: (it['fav'] as bool?) == true,
                       onFavoriteTap: () =>
                           _toggleFavAndRefresh(it['id'] as String),
-                      typeText: it['type'] as String,
-                      ageText: it['age'] as String,
-                      conditionText: it['cond'] as String,
-                      onTypeTap: () => widget.onTagTap('type', it['type'] as String),
-                      onAgeTap: () => widget.onTagTap('age', it['age'] as String),
-                      onConditionTap: () =>
-                          widget.onTagTap('cond', it['cond'] as String),
+                      isFocused: _matchesActiveTag(it),
                       onOpen: () => _openDetail(it),
                     );
                   },
@@ -117,7 +175,8 @@ class _EmptyFavorites extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
+              //color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(18),
               boxShadow: const [
                 BoxShadow(
@@ -131,7 +190,7 @@ class _EmptyFavorites extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.favorite_border,
-                    size: 44, color: Colors.black.withOpacity(0.55)),
+                    size: 44, color: Colors.black.withValues(alpha: 0.55)),
                 const SizedBox(height: 12),
                 const Text(
                   'Todavía no tenés favoritos',
@@ -144,7 +203,7 @@ class _EmptyFavorites extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     height: 1.35,
-                    color: Colors.black.withOpacity(0.7),
+                    color: Colors.black.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
