@@ -25,6 +25,10 @@ class _HomeScreenState extends State<HomeScreen> {
       'id': 'a1',
       'image':
           'https://images.unsplash.com/photo-1560859259-fcf2b952aed8?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'images': [
+        'https://images.unsplash.com/photo-1560859259-fcf2b952aed8?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        'https://images.unsplash.com/photo-1519689680058-324335c77eba?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      ],
       'price': '—',
       'badge': 'Donación',
       'type': 'Body',
@@ -33,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'title': 'Body 0–3m',
       'status': 'Vigente',
       'size': 'RN',
+      'color': 'Crema',
       'q': 2,
       'last': 'hace 3 h',
       'fav': false,
@@ -42,6 +47,9 @@ class _HomeScreenState extends State<HomeScreen> {
       'id': 'a2',
       'image':
           'https://images.unsplash.com/photo-1559454403-b8fb88521f11?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'images': [
+        'https://images.unsplash.com/photo-1559454403-b8fb88521f11?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      ],
       'price': '\$ 650',
       'badge': 'Venta',
       'type': 'Manta',
@@ -50,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'title': 'Manta tejida 0–3m',
       'status': 'Vigente',
       'size': 'U',
+      'color': 'Beige',
       'q': 9,
       'last': 'hace 40 min',
       'fav': false,
@@ -59,6 +68,10 @@ class _HomeScreenState extends State<HomeScreen> {
       'id': 'a3',
       'image':
           'https://images.unsplash.com/photo-1684244160171-97f5dac39204?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'images': [
+        'https://images.unsplash.com/photo-1684244160171-97f5dac39204?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        'https://images.unsplash.com/photo-1596450514730-b0a52f49c4fa?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      ],
       'price': '\$ 520',
       'badge': 'Venta',
       'type': 'Vestido',
@@ -67,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'title': 'Vestido 6–12m',
       'status': 'Vigente',
       'size': 'M',
+      'color': 'Rosa',
       'q': 1,
       'last': 'ayer',
       'fav': false,
@@ -76,6 +90,9 @@ class _HomeScreenState extends State<HomeScreen> {
       'id': 'b1',
       'image':
           'https://plus.unsplash.com/premium_photo-1675183689638-a68fe7048da9?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'images': [
+        'https://plus.unsplash.com/premium_photo-1675183689638-a68fe7048da9?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      ],
       'price': '\$ 200',
       'badge': 'Venta simbólica',
       'type': 'Conjunto',
@@ -84,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'title': 'Conjunto 3–6m',
       'status': 'Vigente',
       'size': 'S',
+      'color': 'Azul',
       'q': 12,
       'last': 'hace 2 h',
       'fav': false,
@@ -93,6 +111,9 @@ class _HomeScreenState extends State<HomeScreen> {
       'id': 'b2',
       'image':
           'https://images.unsplash.com/photo-1622290291165-d341f1938b8a?q=80&w=1072&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'images': [
+        'https://images.unsplash.com/photo-1622290291165-d341f1938b8a?q=80&w=1072&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      ],
       'price': '\$ 710',
       'badge': 'Venta',
       'type': 'Body',
@@ -101,6 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'title': 'Body 0–3m',
       'status': 'Vigente',
       'size': 'RN',
+      'color': 'Blanco',
       'q': 0,
       'last': 'sin actividad',
       'fav': true,
@@ -110,6 +132,9 @@ class _HomeScreenState extends State<HomeScreen> {
       'id': 'b3',
       'image':
           'https://images.unsplash.com/photo-1560506840-ec148e82a604?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'images': [
+        'https://images.unsplash.com/photo-1560506840-ec148e82a604?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      ],
       'price': '—',
       'badge': 'Trueque',
       'type': 'Campera',
@@ -118,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'title': 'Campera 12–18m',
       'status': 'Vigente',
       'size': 'L',
+      'color': 'Gris',
       'q': 4,
       'last': 'hace 5 días',
       'fav': false,
@@ -127,6 +153,9 @@ class _HomeScreenState extends State<HomeScreen> {
       'id': 'c1',
       'image':
           'https://images.unsplash.com/photo-1636905206149-bc3217e6a198?q=80&w=683&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'images': [
+        'https://images.unsplash.com/photo-1636905206149-bc3217e6a198?q=80&w=683&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      ],
       'price': '\$ 700',
       'badge': 'Venta',
       'type': 'Pijama',
@@ -135,6 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'title': 'Pijama 6–12m',
       'status': 'Vigente',
       'size': 'M',
+      'color': 'Verde',
       'q': 7,
       'last': 'hace 1 h',
       'fav': false,
@@ -337,18 +367,52 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openDetail(Map<String, dynamic> item) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ItemDetailScreen(
-          item: item,
-          onToggleFavorite: () => _toggleFavorite(item['id'] as String),
-          onTagTap: (type, value) => _setTagFilter(type: type, value: value),
-          activeTagType: _activeTagType,
-          activeTagValue: _activeTagValue,
-        ),
-      ),
+  NidoItem _toNidoItem(Map<String, dynamic> it,
+      {List<NidoItem> recommended = const []}) {
+    return NidoItem(
+      id: it['id'] as String,
+      title: it['title'] as String?,
+      price: (it['price'] as String?) ?? '—',
+      size: (it['size'] as String?) ?? '—',
+      color: (it['color'] as String?) ?? '—',
+      note: (it['note'] as String?) ?? '',
+      imageUrls: (it['images'] as List<dynamic>?)?.cast<String>() ??
+          [(it['image'] as String?) ?? ''],
+      inquiryCount: (it['q'] as int?) ?? 0,
+      recommended: recommended,
     );
+  }
+
+  List<NidoItem> _recommendedFor(Map<String, dynamic> base) {
+    final others = _items.where((x) => x['id'] != base['id']).toList();
+    final subset = others.take(8).toList();
+    return subset.map((e) => _toNidoItem(e)).toList();
+  }
+
+  Route _buildDetailRoute(NidoItem item) {
+    return PageRouteBuilder(
+      transitionDuration: const Duration(milliseconds: 450),
+      pageBuilder: (context, _, __) => ItemDetailScreen(
+        item: item,
+        onBack: () => Navigator.of(context).pop(),
+        onChat: (it) {},
+        onBuy: (it) {},
+        onOpenRecommended: (it) {
+          Navigator.of(context).push(_buildDetailRoute(it));
+        },
+      ),
+      transitionsBuilder: (_, animation, __, child) {
+        final curved =
+            CurvedAnimation(parent: animation, curve: Curves.easeOut);
+        return FadeTransition(opacity: curved, child: child);
+      },
+    );
+  }
+
+  void _openDetailFromBack(Map<String, dynamic> item) {
+    final rec = _recommendedFor(item);
+    final nidoItem = _toNidoItem(item, recommended: rec);
+    Navigator.of(context).push(_buildDetailRoute(nidoItem));
   }
 
   @override
@@ -470,7 +534,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   priceSelected:
                       _activePriceTextOrder == (item['price'] as String),
                   isFocused: _matchesActiveTag(item),
-                  onOpen: () => _openDetail(item),
+                  backTitle: item['title'] as String?,
+                  backSize: item['size'] as String?,
+                  backInquiries: item['q'] as int?,
+                  onOpenBack: () => _openDetailFromBack(item),
                 );
               },
             );

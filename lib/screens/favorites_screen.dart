@@ -90,19 +90,52 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
   }
 
-  Future<void> _openDetail(Map<String, dynamic> it) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ItemDetailScreen(
-          item: it,
-          onToggleFavorite: () => widget.onToggleFavorite(it['id'] as String),
-          onTagTap: (t, v) => _setTagFilter(t, v),
-          activeTagType: _activeTagType,
-          activeTagValue: _activeTagValue,
-        ),
-      ),
+  NidoItem _toNidoItem(Map<String, dynamic> it,
+      {List<NidoItem> recommended = const []}) {
+    return NidoItem(
+      id: it['id'] as String,
+      title: it['title'] as String?,
+      price: (it['price'] as String?) ?? '—',
+      size: (it['size'] as String?) ?? '—',
+      color: (it['color'] as String?) ?? '—',
+      note: (it['note'] as String?) ?? '',
+      imageUrls: (it['images'] as List<dynamic>?)?.cast<String>() ??
+          [(it['image'] as String?) ?? ''],
+      inquiryCount: (it['q'] as int?) ?? 0,
+      recommended: recommended,
     );
+  }
 
+  List<NidoItem> _recommendedFor(Map<String, dynamic> base) {
+    final others = widget.items.where((x) => x['id'] != base['id']).toList();
+    final subset = others.take(8).toList();
+    return subset.map((e) => _toNidoItem(e)).toList();
+  }
+
+  Route _buildDetailRoute(NidoItem item) {
+    return PageRouteBuilder(
+      transitionDuration: const Duration(milliseconds: 450),
+      pageBuilder: (context, _, __) => ItemDetailScreen(
+        item: item,
+        onBack: () => Navigator.of(context).pop(),
+        onChat: (it) {},
+        onBuy: (it) {},
+        onOpenRecommended: (it) {
+          Navigator.of(context).push(_buildDetailRoute(it));
+        },
+      ),
+      transitionsBuilder: (_, animation, __, child) {
+        final curved =
+            CurvedAnimation(parent: animation, curve: Curves.easeOut);
+        return FadeTransition(opacity: curved, child: child);
+      },
+    );
+  }
+
+  Future<void> _openDetailFromBack(Map<String, dynamic> it) async {
+    final rec = _recommendedFor(it);
+    final nidoItem = _toNidoItem(it, recommended: rec);
+    await Navigator.of(context).push(_buildDetailRoute(nidoItem));
     setState(() {});
   }
 
@@ -152,7 +185,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       onFavoriteTap: () =>
                           _toggleFavAndRefresh(it['id'] as String),
                       isFocused: _matchesActiveTag(it),
-                      onOpen: () => _openDetail(it),
+                      backTitle: it['title'] as String?,
+                      backSize: it['size'] as String?,
+                      backInquiries: it['q'] as int?,
+                      onOpenBack: () => _openDetailFromBack(it),
                     );
                   },
                 );
@@ -161,7 +197,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 }
-
 class _EmptyFavorites extends StatelessWidget {
   const _EmptyFavorites();
 

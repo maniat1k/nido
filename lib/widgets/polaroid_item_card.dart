@@ -2,21 +2,26 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-class PolaroidItemCard extends StatelessWidget {
-  final String? badgeText; // Ej: "Nuevo", "Usado", "Oferta", etc. Si es null o vacío, no se muestra badge.
-  final String imageUrl; 
-  final String priceText; // Ej: "$1200", "Gratis", "A consultar", etc.
- 
-  // Estado de favorito (corazón), para mostrarlo lleno o vacío.
-  final bool isFavorited; 
-  final VoidCallback? onFavoriteTap; 
+class PolaroidItemCard extends StatefulWidget {
+  final String? badgeText;
+  final String imageUrl;
+  final String priceText;
+
+  final bool isFavorited;
+  final VoidCallback? onFavoriteTap;
 
   final VoidCallback? onBadgeTap;
   final VoidCallback? onPriceTap;
   final bool badgeSelected;
   final bool priceSelected;
 
-  final VoidCallback? onOpen;
+  /// ✅ Se dispara SOLO cuando el usuario toca el REVERSO.
+  final VoidCallback? onOpenBack;
+
+  /// Datos que aparecen en el reverso (metadata).
+  final String? backTitle;
+  final String? backSize;
+  final int? backInquiries;
 
   /// true = ítem “activo / enfocado”
   /// false = ítem atenuado
@@ -33,13 +38,25 @@ class PolaroidItemCard extends StatelessWidget {
     this.onPriceTap,
     this.badgeSelected = false,
     this.priceSelected = false,
+    this.onOpenBack,
+    this.backTitle,
+    this.backSize,
+    this.backInquiries,
     required this.isFocused,
-    required this.onOpen,
   });
 
   @override
+  State<PolaroidItemCard> createState() => _PolaroidItemCardState();
+}
+
+class _PolaroidItemCardState extends State<PolaroidItemCard> {
+  bool _flipped = false;
+
+  void _toggleFlip() => setState(() => _flipped = !_flipped);
+
+  @override
   Widget build(BuildContext context) {
-    final overlayOpacity = isFocused ? 0.0 : 0.12;
+    final overlayOpacity = widget.isFocused ? 0.0 : 0.12;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
@@ -55,72 +72,252 @@ class PolaroidItemCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Stack(
-          children: [
-            // Imagen clickeable
-            Positioned.fill(
-              child: InkWell(
-                onTap: onOpen,
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.image_not_supported_outlined),
-                  ),
-                ),
-              ),
-            ),
-
-            // ✅ FIX: overlay NO debe bloquear taps
-            if (overlayOpacity > 0)
+        child: _FlipCard(
+          flipped: _flipped,
+          front: Stack(
+            children: [
               Positioned.fill(
-                child: IgnorePointer(
-                  ignoring: true,
-                  child: Container(
-                    color: Colors.white.withValues(alpha:overlayOpacity),
+                child: InkWell(
+                  onTap: _toggleFlip,
+                  child: Image.network(
+                    widget.imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.image_not_supported_outlined),
+                    ),
                   ),
                 ),
               ),
-
-            // Badge + favorito
-            Positioned(
-              top: 10,
-              left: 10,
-              right: 10,
-              child: Row(
-                children: [
-                  if (badgeText != null && badgeText!.trim().isNotEmpty)
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: onBadgeTap,
-                      child: _BadgePill(
-                        text: badgeText!.trim(),
-                        selected: badgeSelected,
-                      ),
+              if (overlayOpacity > 0)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: true,
+                    child: Container(
+                      color: Colors.white.withValues(alpha: overlayOpacity),
                     ),
-                  const Spacer(),
-                  FavoriteHeartButton(
-                    filled: isFavorited,
-                    onTap: onFavoriteTap,
+                  ),
+                ),
+              Positioned(
+                top: 10,
+                left: 10,
+                right: 10,
+                child: Row(
+                  children: [
+                    if (widget.badgeText != null &&
+                        widget.badgeText!.trim().isNotEmpty)
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: widget.onBadgeTap,
+                        child: _BadgePill(
+                          text: widget.badgeText!.trim(),
+                          selected: widget.badgeSelected,
+                        ),
+                      ),
+                    const Spacer(),
+                    FavoriteHeartButton(
+                      filled: widget.isFavorited,
+                      onTap: widget.onFavoriteTap,
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                left: 10,
+                bottom: 10,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: widget.onPriceTap,
+                  child:
+                      _PricePill(text: widget.priceText, selected: widget.priceSelected),
+                ),
+              ),
+              Positioned(
+                right: 8,
+                bottom: 8,
+                child: _FlipHint(onTap: _toggleFlip),
+              ),
+            ],
+          ),
+          back: _BackCard(
+            title: widget.backTitle ?? 'Artículo',
+            size: widget.backSize ?? '—',
+            inquiries: widget.backInquiries ?? 0,
+            onBack: _toggleFlip,
+            onOpen: widget.onOpenBack,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FlipCard extends StatelessWidget {
+  final bool flipped;
+  final Widget front;
+  final Widget back;
+
+  const _FlipCard({
+    required this.flipped,
+    required this.front,
+    required this.back,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const dur = Duration(milliseconds: 420);
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: flipped ? 1 : 0),
+      duration: dur,
+      curve: Curves.easeInOut,
+      builder: (context, t, _) {
+        final angle = t * math.pi;
+        final isBack = t > 0.5;
+
+        return Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.identity()
+            ..setEntry(3, 2, 0.001)
+            ..rotateY(angle),
+          child: isBack
+              ? Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.identity()..rotateY(math.pi),
+                  child: back,
+                )
+              : front,
+        );
+      },
+    );
+  }
+}
+
+class _BackCard extends StatelessWidget {
+  final String title;
+  final String size;
+  final int inquiries;
+  final VoidCallback onBack;
+  final VoidCallback? onOpen;
+
+  const _BackCard({
+    required this.title,
+    required this.size,
+    required this.inquiries,
+    required this.onBack,
+    required this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      child: InkWell(
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.flip),
+                    onPressed: onBack,
+                    tooltip: 'Volver al frente',
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'Reverso',
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 6),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _BackRow(label: 'Talle', value: size),
+              _BackRow(label: 'Consultas', value: '$inquiries'),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'Abrir detalle',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-            // Precio
-            Positioned(
-              left: 10,
-              bottom: 10,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onPriceTap,
-                child: _PricePill(text: priceText, selected: priceSelected),
+class _BackRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _BackRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.black.withValues(alpha: 0.55),
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ],
+          ),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FlipHint extends StatelessWidget {
+  final VoidCallback onTap;
+  const _FlipHint({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.12)),
         ),
+        child: const Icon(Icons.flip, size: 16),
       ),
     );
   }
@@ -205,116 +402,6 @@ class _FavoriteHeartButtonState extends State<FavoriteHeartButton>
           },
         ),
       ),
-    );
-  }
-}
-
-class BurstTagPill extends StatefulWidget {
-  final String text;
-  final bool selected;
-  final VoidCallback? onTap;
-  final double maxWidth;
-
-  const BurstTagPill({
-    super.key,
-    required this.text,
-    required this.selected,
-    required this.onTap,
-    this.maxWidth = 140,
-  });
-
-  @override
-  State<BurstTagPill> createState() => _BurstTagPillState();
-}
-
-class _BurstTagPillState extends State<BurstTagPill>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 520),
-  );
-
-  late final Animation<double> _pop = CurvedAnimation(
-    parent: _c,
-    curve: const Interval(0.0, 0.35, curve: Curves.easeOutBack),
-  );
-
-  late final Animation<double> _burst = CurvedAnimation(
-    parent: _c,
-    curve: const Interval(0.05, 0.95, curve: Curves.easeOut),
-  );
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  void _trigger() => _c.forward(from: 0);
-
-  @override
-  Widget build(BuildContext context) {
-    final sel = widget.selected;
-
-    const accent = Color(0xFF6E3CBC);
-    final bg = sel
-        ? accent.withValues(alpha: 0.92)
-        : Colors.black.withValues(alpha: 0.22);
-    final border = sel ? accent.withValues(alpha: 0.78) : Colors.transparent;
-    final fg = sel ? Colors.white : Colors.black87;
-
-    final child = ConstrainedBox(
-      constraints: BoxConstraints(minHeight: 26, maxWidth: widget.maxWidth),
-      child: AnimatedBuilder(
-        animation: _c,
-        builder: (context, _) {
-          final s = 1.0 + (_pop.value * 0.12);
-          return Stack(
-            alignment: Alignment.center,
-            children: [
-              IgnorePointer(
-                child: CustomPaint(
-                  size: const Size(32, 32),
-                  painter: _BurstDotsPainter(progress: _burst.value),
-                ),
-              ),
-              Transform.scale(
-                scale: s,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: bg,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: border, width: 1.5),
-                  ),
-                  child: Text(
-                    widget.text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w800,
-                      color: fg,
-                      height: 1.0,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-
-    if (widget.onTap == null) return child;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(999),
-      onTap: () {
-        _trigger();
-        widget.onTap?.call();
-      },
-      child: child,
     );
   }
 }
