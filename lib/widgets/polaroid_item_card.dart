@@ -130,15 +130,20 @@ class _PolaroidItemCardState extends State<PolaroidItemCard> {
                   children: [
                     if (widget.item.badge != null &&
                         widget.item.badge!.trim().isNotEmpty)
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: widget.onBadgeTap,
-                        child: _BadgePill(
-                          text: widget.item.badge!.trim(),
-                          selected: widget.badgeSelected,
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: widget.onBadgeTap,
+                            child: _BadgePill(
+                              text: widget.item.badge!.trim(),
+                              selected: widget.badgeSelected,
+                            ),
+                          ),
                         ),
                       ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     FavoriteHeartButton(
                       filled: widget.item.isFavorite,
                       onTap: widget.onFavoriteTap,
@@ -420,6 +425,9 @@ class _PricePill extends StatelessWidget {
       ),
       child: Text(
         text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        softWrap: false,
         style: TextStyle(
           fontWeight: FontWeight.w900,
           fontSize: 12,
@@ -452,6 +460,9 @@ class _BadgePill extends StatelessWidget {
       ),
       child: Text(
         text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        softWrap: false,
         style: TextStyle(
           fontWeight: FontWeight.w900,
           fontSize: 12,
