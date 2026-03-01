@@ -1,13 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../models/nido_item.dart';
 
 class PolaroidItemCard extends StatefulWidget {
-  final String? badgeText;
-  final String imageUrl;
-  final String priceText;
+  final NidoItem item;
 
-  final bool isFavorited;
   final VoidCallback? onFavoriteTap;
 
   final VoidCallback? onBadgeTap;
@@ -29,10 +27,7 @@ class PolaroidItemCard extends StatefulWidget {
 
   const PolaroidItemCard({
     super.key,
-    required this.badgeText,
-    required this.imageUrl,
-    required this.priceText,
-    required this.isFavorited,
+    required this.item,
     required this.onFavoriteTap,
     this.onBadgeTap,
     this.onPriceTap,
@@ -109,7 +104,7 @@ class _PolaroidItemCardState extends State<PolaroidItemCard> {
                 child: InkWell(
                   onTap: _openFromImageTap,
                   child: Image.network(
-                    widget.imageUrl,
+                    widget.item.imageUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => Container(
                       color: Colors.black.withValues(alpha: 0.06),
@@ -133,19 +128,19 @@ class _PolaroidItemCardState extends State<PolaroidItemCard> {
                 right: 10,
                 child: Row(
                   children: [
-                    if (widget.badgeText != null &&
-                        widget.badgeText!.trim().isNotEmpty)
+                    if (widget.item.badge != null &&
+                        widget.item.badge!.trim().isNotEmpty)
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: widget.onBadgeTap,
                         child: _BadgePill(
-                          text: widget.badgeText!.trim(),
+                          text: widget.item.badge!.trim(),
                           selected: widget.badgeSelected,
                         ),
                       ),
                     const Spacer(),
                     FavoriteHeartButton(
-                      filled: widget.isFavorited,
+                      filled: widget.item.isFavorite,
                       onTap: widget.onFavoriteTap,
                     ),
                   ],
@@ -158,7 +153,7 @@ class _PolaroidItemCardState extends State<PolaroidItemCard> {
                   behavior: HitTestBehavior.opaque,
                   onTap: widget.onPriceTap,
                   child: _PricePill(
-                    text: widget.priceText,
+                    text: widget.item.price,
                     selected: widget.priceSelected,
                   ),
                 ),
@@ -166,9 +161,9 @@ class _PolaroidItemCardState extends State<PolaroidItemCard> {
             ],
           ),
           back: _BackCard(
-            title: widget.backTitle ?? 'Articulo',
-            size: widget.backSize ?? '-',
-            inquiries: widget.backInquiries ?? 0,
+            title: widget.backTitle ?? widget.item.title,
+            size: widget.backSize ?? widget.item.size,
+            inquiries: widget.backInquiries ?? widget.item.inquiryCount,
           ),
         ),
       ),

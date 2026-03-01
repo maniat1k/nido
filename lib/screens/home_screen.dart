@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../data/items_repository.dart';
+import '../models/nido_item.dart';
 import '../widgets/polaroid_item_card.dart';
 import 'favorites_screen.dart';
 import 'item_detail_screen.dart';
@@ -12,168 +14,18 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // ✅ Filtro activo por tag (type / age / cond)
-  String? _activeTagType; // 'type' | 'age' | 'cond'
+  final ItemsRepository _repository = const ItemsRepository();
+
+  String? _activeTagType;
   String? _activeTagValue;
   String? _activeBadgeOrder;
   String? _activePriceTextOrder;
   num? _activePriceAnchor;
   int _cardResetSignal = 0;
 
-  // Seed data (fake)
-  late final List<Map<String, dynamic>> _items = [
-    {
-      'id': 'a1',
-      'image':
-          'https://images.unsplash.com/photo-1560859259-fcf2b952aed8?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      'images': [
-        'https://images.unsplash.com/photo-1560859259-fcf2b952aed8?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-        'https://images.unsplash.com/photo-1519689680058-324335c77eba?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      ],
-      'price': '—',
-      'badge': 'Donación',
-      'type': 'Body',
-      'age': '0–3m',
-      'cond': 'Usado',
-      'title': 'Body 0–3m',
-      'status': 'Vigente',
-      'size': 'RN',
-      'color': 'Crema',
-      'q': 2,
-      'last': 'hace 3 h',
-      'fav': false,
-      'note': 'Usado pocas veces. Sin manchas. Se retira por Tres Cruces.',
-    },
-    {
-      'id': 'a2',
-      'image':
-          'https://images.unsplash.com/photo-1559454403-b8fb88521f11?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      'images': [
-        'https://images.unsplash.com/photo-1559454403-b8fb88521f11?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      ],
-      'price': '\$ 650',
-      'badge': 'Venta',
-      'type': 'Manta',
-      'age': '0–3m',
-      'cond': 'Nuevo',
-      'title': 'Manta tejida 0–3m',
-      'status': 'Vigente',
-      'size': 'U',
-      'color': 'Beige',
-      'q': 9,
-      'last': 'hace 40 min',
-      'fav': false,
-      'note': 'Tejida, súper suave. Ideal para cochecito.',
-    },
-    {
-      'id': 'a3',
-      'image':
-          'https://images.unsplash.com/photo-1684244160171-97f5dac39204?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      'images': [
-        'https://images.unsplash.com/photo-1684244160171-97f5dac39204?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-        'https://images.unsplash.com/photo-1596450514730-b0a52f49c4fa?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      ],
-      'price': '\$ 520',
-      'badge': 'Venta',
-      'type': 'Vestido',
-      'age': '6–12m',
-      'cond': 'Usado',
-      'title': 'Vestido 6–12m',
-      'status': 'Vigente',
-      'size': 'M',
-      'color': 'Rosa',
-      'q': 1,
-      'last': 'ayer',
-      'fav': false,
-      'note': 'Muy lindo para evento. Tela liviana.',
-    },
-    {
-      'id': 'b1',
-      'image':
-          'https://plus.unsplash.com/premium_photo-1675183689638-a68fe7048da9?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      'images': [
-        'https://plus.unsplash.com/premium_photo-1675183689638-a68fe7048da9?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      ],
-      'price': '\$ 200',
-      'badge': 'Venta simbólica',
-      'type': 'Conjunto',
-      'age': '3–6m',
-      'cond': 'Usado con detalles',
-      'title': 'Conjunto 3–6m',
-      'status': 'Vigente',
-      'size': 'S',
-      'color': 'Azul',
-      'q': 12,
-      'last': 'hace 2 h',
-      'fav': false,
-      'note': 'Tiene un detalle mínimo (ver foto). Se compensa con precio.',
-    },
-    {
-      'id': 'b2',
-      'image':
-          'https://images.unsplash.com/photo-1622290291165-d341f1938b8a?q=80&w=1072&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      'images': [
-        'https://images.unsplash.com/photo-1622290291165-d341f1938b8a?q=80&w=1072&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      ],
-      'price': '\$ 710',
-      'badge': 'Venta',
-      'type': 'Body',
-      'age': '0–3m',
-      'cond': 'Nuevo',
-      'title': 'Body 0–3m',
-      'status': 'Vigente',
-      'size': 'RN',
-      'color': 'Blanco',
-      'q': 0,
-      'last': 'sin actividad',
-      'fav': true,
-      'note': 'Nuevo con etiqueta. Nunca usado.',
-    },
-    {
-      'id': 'b3',
-      'image':
-          'https://images.unsplash.com/photo-1560506840-ec148e82a604?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      'images': [
-        'https://images.unsplash.com/photo-1560506840-ec148e82a604?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      ],
-      'price': '—',
-      'badge': 'Trueque',
-      'type': 'Campera',
-      'age': '12–18m',
-      'cond': 'Usado',
-      'title': 'Campera 12–18m',
-      'status': 'Vigente',
-      'size': 'L',
-      'color': 'Gris',
-      'q': 4,
-      'last': 'hace 5 días',
-      'fav': false,
-      'note': 'Busco cambiar por calzado 18–24m o lote similar.',
-    },
-    {
-      'id': 'c1',
-      'image':
-          'https://images.unsplash.com/photo-1636905206149-bc3217e6a198?q=80&w=683&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      'images': [
-        'https://images.unsplash.com/photo-1636905206149-bc3217e6a198?q=80&w=683&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      ],
-      'price': '\$ 700',
-      'badge': 'Venta',
-      'type': 'Pijama',
-      'age': '6–12m',
-      'cond': 'Usado',
-      'title': 'Pijama 6–12m',
-      'status': 'Vigente',
-      'size': 'M',
-      'color': 'Verde',
-      'q': 7,
-      'last': 'hace 1 h',
-      'fav': false,
-      'note': 'Súper abrigado para invierno.',
-    },
-  ];
+  late final List<NidoItem> _items = _repository.getAllItems();
 
-  int get _favCount => _items.where((x) => x['fav'] == true).length;
+  int get _favCount => _items.where((item) => item.isFavorite).length;
 
   List<({String type, String value, int count})> get _tagStats {
     final Map<String, int> counts = {};
@@ -184,9 +36,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     for (final item in _items) {
-      add('type', item['type'] as String);
-      add('age', item['age'] as String);
-      add('cond', item['cond'] as String);
+      add('type', item.type);
+      add('age', item.age);
+      add('cond', item.condition);
     }
 
     final rows = counts.entries.map((e) {
@@ -199,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (byCount != 0) return byCount;
       return a.value.compareTo(b.value);
     });
+
     return rows;
   }
 
@@ -215,11 +68,19 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  NidoItem? _findItemById(String id) {
+    for (final item in _items) {
+      if (item.id == id) return item;
+    }
+    return null;
+  }
+
   void _toggleFavorite(String id) {
     setState(() {
-      final idx = _items.indexWhere((x) => x['id'] == id);
+      final idx = _items.indexWhere((item) => item.id == id);
       if (idx == -1) return;
-      _items[idx]['fav'] = !(_items[idx]['fav'] as bool);
+      final current = _items[idx];
+      _items[idx] = current.copyWith(isFavorite: !current.isFavorite);
     });
   }
 
@@ -288,39 +149,44 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  bool _matchesActiveTag(Map<String, dynamic> item) {
+  bool _matchesActiveTag(NidoItem item) {
     if (_activeTagType == null || _activeTagValue == null) return false;
     switch (_activeTagType) {
       case 'type':
-        return item['type'] == _activeTagValue;
+        return item.type == _activeTagValue;
       case 'age':
-        return item['age'] == _activeTagValue;
+        return item.age == _activeTagValue;
       case 'cond':
-        return item['cond'] == _activeTagValue;
+        return item.condition == _activeTagValue;
       default:
         return false;
     }
   }
 
-  List<Map<String, dynamic>> get _visibleItems {
-    final List<Map<String, dynamic>> list = (_activeTagType == null || _activeTagValue == null)
-        ? [..._items]
+  bool _isCardFocused(NidoItem item) {
+    if (_activeTagType == null || _activeTagValue == null) return true;
+    return _matchesActiveTag(item);
+  }
+
+  List<NidoItem> get _visibleItems {
+    final list = (_activeTagType == null || _activeTagValue == null)
+        ? <NidoItem>[..._items]
         : _items.where(_matchesActiveTag).toList();
 
     final indexById = <String, int>{
-      for (int i = 0; i < _items.length; i++) (_items[i]['id'] as String): i,
+      for (int i = 0; i < _items.length; i++) _items[i].id: i,
     };
 
     list.sort((a, b) {
       if (_activeBadgeOrder != null) {
-        final aFirst = (a['badge'] as String?) == _activeBadgeOrder;
-        final bFirst = (b['badge'] as String?) == _activeBadgeOrder;
+        final aFirst = a.badge == _activeBadgeOrder;
+        final bFirst = b.badge == _activeBadgeOrder;
         if (aFirst != bFirst) return aFirst ? -1 : 1;
       }
 
       if (_activePriceAnchor != null) {
-        final aPrice = _parsePrice(a['price'] as String? ?? '');
-        final bPrice = _parsePrice(b['price'] as String? ?? '');
+        final aPrice = _parsePrice(a.price);
+        final bPrice = _parsePrice(b.price);
         final aGroup = _priceGroup(aPrice, _activePriceAnchor!);
         final bGroup = _priceGroup(bPrice, _activePriceAnchor!);
         if (aGroup != bGroup) return aGroup.compareTo(bGroup);
@@ -330,8 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
 
-      return (indexById[a['id'] as String] ?? 0)
-          .compareTo(indexById[b['id'] as String] ?? 0);
+      return (indexById[a.id] ?? 0).compareTo(indexById[b.id] ?? 0);
     });
 
     return list;
@@ -368,45 +233,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  NidoItem _toNidoItem(Map<String, dynamic> it,
-      {List<NidoItem> recommended = const []}) {
-    return NidoItem(
-      id: it['id'] as String,
-      title: it['title'] as String?,
-      price: (it['price'] as String?) ?? '—',
-      size: (it['size'] as String?) ?? '—',
-      color: (it['color'] as String?) ?? '—',
-      note: (it['note'] as String?) ?? '',
-      imageUrls: (it['images'] as List<dynamic>?)?.cast<String>() ??
-          [(it['image'] as String?) ?? ''],
-      inquiryCount: (it['q'] as int?) ?? 0,
-      recommended: recommended,
-    );
-  }
-
-  bool _isCardFocused(Map<String, dynamic> item) {
-    if (_activeTagType == null || _activeTagValue == null) return true;
-    return _matchesActiveTag(item);
-  }
-
-  Map<String, dynamic>? _findItemById(String id) {
-    for (final item in _items) {
-      if (item['id'] == id) return item;
-    }
-    return null;
-  }
-
-  List<NidoItem> _recommendedFor(String baseId) {
-    final others = _items.where((x) => x['id'] != baseId).toList();
-    final subset = others.take(8).toList();
-    return subset.map((e) => _toNidoItem(e)).toList();
+  List<NidoItem> _recommendedFor(NidoItem baseItem) {
+    final seedRelated = _repository.getRelatedItems(baseItem, limit: 8);
+    return seedRelated
+        .map((seedItem) => _findItemById(seedItem.id) ?? seedItem)
+        .toList();
   }
 
   NidoItem? _buildItemWithRecommendations(String id) {
-    final raw = _findItemById(id);
-    if (raw == null) return null;
-    final recommended = _recommendedFor(id);
-    return _toNidoItem(raw, recommended: recommended);
+    final item = _findItemById(id);
+    if (item == null) return null;
+    return item.copyWith(recommended: _recommendedFor(item));
   }
 
   Route _buildDetailRoute(String itemId) {
@@ -436,13 +273,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
           },
-          onToggleFavorite: (id) => _toggleFavorite(id),
+          onToggleFavorite: _toggleFavorite,
           onChat: (it) {},
           onBuy: (it) {},
           onOpenRecommended: (it) {
             Navigator.of(context).push(_buildDetailRoute(it.id));
           },
-          isFavorited: (_findItemById(item.id)?['fav'] as bool?) ?? false,
+          isFavorited: (_findItemById(item.id)?.isFavorite) ?? false,
         );
       },
       transitionsBuilder: (_, animation, __, child) {
@@ -453,9 +290,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _openDetailFromImageTap(Map<String, dynamic> item) async {
-    final itemId = item['id'] as String;
-    await Navigator.of(context).push(_buildDetailRoute(itemId));
+  Future<void> _openDetailFromImageTap(NidoItem item) async {
+    await Navigator.of(context).push(_buildDetailRoute(item.id));
     if (!mounted) return;
     setState(() => _cardResetSignal++);
   }
@@ -545,7 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
         label: const Text('Publicar'),
       ),
       body: GestureDetector(
-        behavior: HitTestBehavior.deferToChild, // ✅ tap “vacío” = limpiar filtro
+        behavior: HitTestBehavior.deferToChild,
         onTap: _clearFilterIfActive,
         child: LayoutBuilder(
           builder: (context, c) {
@@ -568,23 +404,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 final item = items[index];
 
                 return PolaroidItemCard(
-                  imageUrl: item['image'] as String,
-                  priceText: item['price'] as String,
-                  badgeText: item['badge'] as String?,
-                  isFavorited: item['fav'] as bool,
-                  onFavoriteTap: () => _toggleFavorite(item['id'] as String),
-                  onBadgeTap: () => _toggleBadgeOrder(item['badge'] as String?),
-                  onPriceTap: () => _togglePriceOrder(item['price'] as String),
-                  badgeSelected: _activeBadgeOrder == (item['badge'] as String?),
-                  priceSelected:
-                      _activePriceTextOrder == (item['price'] as String),
+                  item: item,
+                  onFavoriteTap: () => _toggleFavorite(item.id),
+                  onBadgeTap: () => _toggleBadgeOrder(item.badge),
+                  onPriceTap: () => _togglePriceOrder(item.price),
+                  badgeSelected: _activeBadgeOrder == item.badge,
+                  priceSelected: _activePriceTextOrder == item.price,
                   isFocused: _isCardFocused(item),
-                  backTitle: item['title'] as String?,
-                  backSize: item['size'] as String?,
-                  backInquiries: item['q'] as int?,
+                  backTitle: item.title,
+                  backSize: item.size,
+                  backInquiries: item.inquiryCount,
                   resetSignal: _cardResetSignal,
-                  onOpenDetailFromImageTap: () =>
-                      _openDetailFromImageTap(item),
+                  onOpenDetailFromImageTap: () => _openDetailFromImageTap(item),
                 );
               },
             );

@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../data/items_repository.dart';
+import '../models/nido_item.dart';
 import '../widgets/polaroid_item_card.dart';
 import 'item_detail_screen.dart';
 
 class FavoritesScreen extends StatefulWidget {
-  final List<Map<String, dynamic>> items;
+  final List<NidoItem> items;
   final void Function(String id) onToggleFavorite;
-
-  /// Callback global (Home) para fijar / toggle del filtro activo
   final void Function(String type, String value) onTagTap;
-
-  /// Estado inicial del filtro activo (para reflejar selección al entrar)
   final String? activeTagType;
   final String? activeTagValue;
 
@@ -28,6 +26,8 @@ class FavoritesScreen extends StatefulWidget {
 }
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
+  final ItemsRepository _repository = const ItemsRepository();
+
   String? _activeTagType;
   String? _activeTagValue;
   int _cardResetSignal = 0;
@@ -39,8 +39,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     _activeTagValue = widget.activeTagValue;
   }
 
-  List<Map<String, dynamic>> _favsNow() {
-    return widget.items.where((e) => (e['fav'] as bool?) == true).toList();
+  List<NidoItem> _favsNow() {
+    return widget.items.where((item) => item.isFavorite).toList();
+  }
+
+  NidoItem? _findItemById(String id) {
+    for (final item in widget.items) {
+      if (item.id == id) return item;
+    }
+    return null;
   }
 
   void _toggleFavAndRefresh(String id) {
@@ -59,7 +66,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       }
     });
 
-    // ✅ persistir en Home (filtro global)
     widget.onTagTap(type, value);
   }
 
@@ -73,63 +79,39 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       _activeTagValue = null;
     });
 
-    // ✅ limpiar también el filtro global (Home) toggleando el mismo valor
     widget.onTagTap(oldType, oldValue);
   }
 
-  bool _matchesActiveTag(Map<String, dynamic> item) {
+  bool _matchesActiveTag(NidoItem item) {
     if (_activeTagType == null || _activeTagValue == null) return false;
     switch (_activeTagType) {
       case 'type':
-        return item['type'] == _activeTagValue;
+        return item.type == _activeTagValue;
       case 'age':
-        return item['age'] == _activeTagValue;
+        return item.age == _activeTagValue;
       case 'cond':
-        return item['cond'] == _activeTagValue;
+        return item.condition == _activeTagValue;
       default:
         return false;
     }
   }
 
-  bool _isCardFocused(Map<String, dynamic> item) {
+  bool _isCardFocused(NidoItem item) {
     if (_activeTagType == null || _activeTagValue == null) return true;
     return _matchesActiveTag(item);
   }
 
-  NidoItem _toNidoItem(Map<String, dynamic> it,
-      {List<NidoItem> recommended = const []}) {
-    return NidoItem(
-      id: it['id'] as String,
-      title: it['title'] as String?,
-      price: (it['price'] as String?) ?? '—',
-      size: (it['size'] as String?) ?? '—',
-      color: (it['color'] as String?) ?? '—',
-      note: (it['note'] as String?) ?? '',
-      imageUrls: (it['images'] as List<dynamic>?)?.cast<String>() ??
-          [(it['image'] as String?) ?? ''],
-      inquiryCount: (it['q'] as int?) ?? 0,
-      recommended: recommended,
-    );
-  }
-
-  Map<String, dynamic>? _findItemById(String id) {
-    for (final item in widget.items) {
-      if (item['id'] == id) return item;
-    }
-    return null;
-  }
-
-  List<NidoItem> _recommendedFor(String baseId) {
-    final others = widget.items.where((x) => x['id'] != baseId).toList();
-    final subset = others.take(8).toList();
-    return subset.map((e) => _toNidoItem(e)).toList();
+  List<NidoItem> _recommendedFor(NidoItem baseItem) {
+    final seedRelated = _repository.getRelatedItems(baseItem, limit: 8);
+    return seedRelated
+        .map((seedItem) => _findItemById(seedItem.id) ?? seedItem)
+        .toList();
   }
 
   NidoItem? _buildItemWithRecommendations(String id) {
-    final raw = _findItemById(id);
-    if (raw == null) return null;
-    final recommended = _recommendedFor(id);
-    return _toNidoItem(raw, recommended: recommended);
+    final item = _findItemById(id);
+    if (item == null) return null;
+    return item.copyWith(recommended: _recommendedFor(item));
   }
 
   Route _buildDetailRoute(String itemId) {
@@ -168,7 +150,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           onOpenRecommended: (it) {
             Navigator.of(context).push(_buildDetailRoute(it.id));
           },
-          isFavorited: (_findItemById(item.id)?['fav'] as bool?) ?? false,
+          isFavorited: (_findItemById(item.id)?.isFavorite) ?? false,
         );
       },
       transitionsBuilder: (_, animation, __, child) {
@@ -179,9 +161,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 
-  Future<void> _openDetailFromImageTap(Map<String, dynamic> it) async {
-    final itemId = it['id'] as String;
-    await Navigator.of(context).push(_buildDetailRoute(itemId));
+  Future<void> _openDetailFromImageTap(NidoItem item) async {
+    await Navigator.of(context).push(_buildDetailRoute(item.id));
     if (!mounted) return;
     setState(() => _cardResetSignal++);
   }
@@ -222,22 +203,18 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     childAspectRatio: aspect,
                   ),
                   itemBuilder: (context, i) {
-                    final it = favs[i];
+                    final item = favs[i];
 
                     return PolaroidItemCard(
-                      imageUrl: it['image'] as String,
-                      priceText: it['price'] as String,
-                      badgeText: it['badge'] as String?,
-                      isFavorited: (it['fav'] as bool?) == true,
-                      onFavoriteTap: () =>
-                          _toggleFavAndRefresh(it['id'] as String),
-                      isFocused: _isCardFocused(it),
-                      backTitle: it['title'] as String?,
-                      backSize: it['size'] as String?,
-                      backInquiries: it['q'] as int?,
+                      item: item,
+                      onFavoriteTap: () => _toggleFavAndRefresh(item.id),
+                      isFocused: _isCardFocused(item),
+                      backTitle: item.title,
+                      backSize: item.size,
+                      backInquiries: item.inquiryCount,
                       resetSignal: _cardResetSignal,
                       onOpenDetailFromImageTap: () =>
-                          _openDetailFromImageTap(it),
+                          _openDetailFromImageTap(item),
                     );
                   },
                 );
@@ -246,6 +223,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 }
+
 class _EmptyFavorites extends StatelessWidget {
   const _EmptyFavorites();
 
@@ -259,7 +237,6 @@ class _EmptyFavorites extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              //color: Colors.white.withOpacity(0.9),
               color: Colors.white.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(18),
               boxShadow: const [
@@ -273,8 +250,11 @@ class _EmptyFavorites extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.favorite_border,
-                    size: 44, color: Colors.black.withValues(alpha: 0.55)),
+                Icon(
+                  Icons.favorite_border,
+                  size: 44,
+                  color: Colors.black.withValues(alpha: 0.55),
+                ),
                 const SizedBox(height: 12),
                 const Text(
                   'Todavía no tenés favoritos',

@@ -1,12 +1,7 @@
-# Flutter / Dart
 *.dart text eol=lf
-
-# Config
 *.yaml text eol=lf
-*.yml  text eol=lf
+*.yml text eol=lf
 *.json text eol=lf
-*.md   text eol=lf
-
-# Windows scripts
+*.md text eol=lf
 *.bat text eol=crlf
 *.ps1 text eol=crlf

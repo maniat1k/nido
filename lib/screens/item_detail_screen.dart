@@ -1,29 +1,6 @@
 import 'package:flutter/material.dart';
+import '../models/nido_item.dart';
 import '../widgets/polaroid_item_card.dart';
-
-class NidoItem {
-  final String id;
-  final String? title;
-  final String price;
-  final String size;
-  final String color;
-  final String note; // max 200
-  final List<String> imageUrls;
-  final int inquiryCount;
-  final List<NidoItem> recommended;
-
-  const NidoItem({
-    required this.id,
-    this.title,
-    required this.price,
-    required this.size,
-    required this.color,
-    required this.note,
-    required this.imageUrls,
-    required this.inquiryCount,
-    this.recommended = const [],
-  });
-}
 
 class ItemDetailScreen extends StatefulWidget {
   final NidoItem item;
@@ -426,9 +403,9 @@ class _ProductInfo extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (item.title != null && item.title!.trim().isNotEmpty)
+          if (item.title.trim().isNotEmpty)
             Text(
-              item.title!,
+              item.title,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
