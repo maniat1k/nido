@@ -15,16 +15,16 @@ class PolaroidItemCard extends StatefulWidget {
   final bool badgeSelected;
   final bool priceSelected;
 
-  /// ✅ Se dispara SOLO cuando el usuario toca el REVERSO.
-  final VoidCallback? onOpenBack;
+  /// Tap en imagen: hace flip y abre detalle directo.
+  final Future<void> Function()? onOpenDetailFromImageTap;
 
-  /// Datos que aparecen en el reverso (metadata).
+  /// Permite al padre forzar el estado visual inicial.
+  final int resetSignal;
+
   final String? backTitle;
   final String? backSize;
   final int? backInquiries;
 
-  /// true = ítem “activo / enfocado”
-  /// false = ítem atenuado
   final bool isFocused;
 
   const PolaroidItemCard({
@@ -38,7 +38,8 @@ class PolaroidItemCard extends StatefulWidget {
     this.onPriceTap,
     this.badgeSelected = false,
     this.priceSelected = false,
-    this.onOpenBack,
+    this.onOpenDetailFromImageTap,
+    this.resetSignal = 0,
     this.backTitle,
     this.backSize,
     this.backInquiries,
@@ -51,8 +52,36 @@ class PolaroidItemCard extends StatefulWidget {
 
 class _PolaroidItemCardState extends State<PolaroidItemCard> {
   bool _flipped = false;
+  bool _navigating = false;
 
-  void _toggleFlip() => setState(() => _flipped = !_flipped);
+  @override
+  void didUpdateWidget(covariant PolaroidItemCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.resetSignal != oldWidget.resetSignal && (_flipped || _navigating)) {
+      setState(() {
+        _flipped = false;
+        _navigating = false;
+      });
+    }
+  }
+
+  Future<void> _openFromImageTap() async {
+    if (_navigating) return;
+
+    setState(() {
+      _flipped = true;
+      _navigating = true;
+    });
+
+    await Future<void>.delayed(const Duration(milliseconds: 220));
+    await widget.onOpenDetailFromImageTap?.call();
+
+    if (!mounted) return;
+    setState(() {
+      _flipped = false;
+      _navigating = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +107,7 @@ class _PolaroidItemCardState extends State<PolaroidItemCard> {
             children: [
               Positioned.fill(
                 child: InkWell(
-                  onTap: _toggleFlip,
+                  onTap: _openFromImageTap,
                   child: Image.network(
                     widget.imageUrl,
                     fit: BoxFit.cover,
@@ -93,7 +122,6 @@ class _PolaroidItemCardState extends State<PolaroidItemCard> {
               if (overlayOpacity > 0)
                 Positioned.fill(
                   child: IgnorePointer(
-                    ignoring: true,
                     child: Container(
                       color: Colors.white.withValues(alpha: overlayOpacity),
                     ),
@@ -129,23 +157,18 @@ class _PolaroidItemCardState extends State<PolaroidItemCard> {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: widget.onPriceTap,
-                  child:
-                      _PricePill(text: widget.priceText, selected: widget.priceSelected),
+                  child: _PricePill(
+                    text: widget.priceText,
+                    selected: widget.priceSelected,
+                  ),
                 ),
-              ),
-              Positioned(
-                right: 8,
-                bottom: 8,
-                child: _FlipHint(onTap: _toggleFlip),
               ),
             ],
           ),
           back: _BackCard(
-            title: widget.backTitle ?? 'Artículo',
-            size: widget.backSize ?? '—',
+            title: widget.backTitle ?? 'Articulo',
+            size: widget.backSize ?? '-',
             inquiries: widget.backInquiries ?? 0,
-            onBack: _toggleFlip,
-            onOpen: widget.onOpenBack,
           ),
         ),
       ),
@@ -166,7 +189,7 @@ class _FlipCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const dur = Duration(milliseconds: 420);
+    const dur = Duration(milliseconds: 320);
 
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: flipped ? 1 : 0),
@@ -198,72 +221,37 @@ class _BackCard extends StatelessWidget {
   final String title;
   final String size;
   final int inquiries;
-  final VoidCallback onBack;
-  final VoidCallback? onOpen;
 
   const _BackCard({
     required this.title,
     required this.size,
     required this.inquiries,
-    required this.onBack,
-    required this.onOpen,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    return Container(
       color: Colors.white,
-      child: InkWell(
-        onTap: onOpen,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.flip),
-                    onPressed: onBack,
-                    tooltip: 'Volver al frente',
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'Reverso',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 8),
-              _BackRow(label: 'Talle', value: size),
-              _BackRow(label: 'Consultas', value: '$inquiries'),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  'Abrir detalle',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Detalle',
+            style: TextStyle(fontWeight: FontWeight.w800),
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _BackRow(label: 'Talle', value: size),
+          _BackRow(label: 'Consultas', value: '$inquiries'),
+        ],
       ),
     );
   }
@@ -296,28 +284,6 @@ class _BackRow extends StatelessWidget {
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FlipHint extends StatelessWidget {
-  final VoidCallback onTap;
-  const _FlipHint({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.9),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.12)),
-        ),
-        child: const Icon(Icons.flip, size: 16),
       ),
     );
   }

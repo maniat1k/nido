@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/polaroid_item_card.dart';
 
 class NidoItem {
   final String id;
@@ -27,9 +28,13 @@ class NidoItem {
 class ItemDetailScreen extends StatefulWidget {
   final NidoItem item;
   final VoidCallback onBack;
+  final VoidCallback onBackToHome;
+  final ValueChanged<NidoItem> onBackToImageSelection;
+  final void Function(String itemId) onToggleFavorite;
   final ValueChanged<NidoItem> onChat;
   final ValueChanged<NidoItem> onBuy;
   final ValueChanged<NidoItem> onOpenRecommended;
+  final bool isFavorited;
 
   final bool isChatLoading;
   final bool isBuyLoading;
@@ -40,9 +45,13 @@ class ItemDetailScreen extends StatefulWidget {
     super.key,
     required this.item,
     required this.onBack,
+    required this.onBackToHome,
+    required this.onBackToImageSelection,
+    required this.onToggleFavorite,
     required this.onChat,
     required this.onBuy,
     required this.onOpenRecommended,
+    this.isFavorited = false,
     this.isChatLoading = false,
     this.isBuyLoading = false,
     this.isChatEnabled = true,
@@ -56,6 +65,18 @@ class ItemDetailScreen extends StatefulWidget {
 class _ItemDetailScreenState extends State<ItemDetailScreen> {
   int _pageIndex = 0;
   bool _noteExpanded = false;
+  late bool _isFav;
+
+  @override
+  void initState() {
+    super.initState();
+    _isFav = widget.isFavorited;
+  }
+
+  void _toggleFavorite() {
+    setState(() => _isFav = !_isFav);
+    widget.onToggleFavorite(widget.item.id);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,6 +94,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 _DetailHeader(
                   title: 'Detalle',
                   onBack: widget.onBack,
+                  onBackToHome: widget.onBackToHome,
+                  onImageSelection: () =>
+                      widget.onBackToImageSelection(widget.item),
                 ),
                 Expanded(
                   child: SingleChildScrollView(
@@ -83,6 +107,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         _Gallery(
                           imageUrls: item.imageUrls,
                           height: galleryHeight,
+                          isFavorited: _isFav,
+                          onToggleFavorite: _toggleFavorite,
                           onPageChanged: (i) => setState(() => _pageIndex = i),
                         ),
                         if (item.imageUrls.length > 1)
@@ -132,10 +158,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 class _DetailHeader extends StatelessWidget {
   final String title;
   final VoidCallback onBack;
+  final VoidCallback onBackToHome;
+  final VoidCallback onImageSelection;
 
   const _DetailHeader({
     required this.title,
     required this.onBack,
+    required this.onBackToHome,
+    required this.onImageSelection,
   });
 
   @override
@@ -163,7 +193,85 @@ class _DetailHeader extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
+          const Spacer(),
+          IconButton(
+            tooltip: 'Ir al inicio',
+            onPressed: onBackToHome,
+            icon: const Icon(Icons.home_outlined),
+          ),
+          TextButton.icon(
+            onPressed: onImageSelection,
+            icon: const Icon(Icons.photo_library_outlined, size: 18),
+            label: const Text('Imagenes'),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class ItemImageSelectionScreen extends StatefulWidget {
+  final NidoItem item;
+  final VoidCallback onOpenDetail;
+
+  const ItemImageSelectionScreen({
+    super.key,
+    required this.item,
+    required this.onOpenDetail,
+  });
+
+  @override
+  State<ItemImageSelectionScreen> createState() => _ItemImageSelectionScreenState();
+}
+
+class _ItemImageSelectionScreenState extends State<ItemImageSelectionScreen> {
+  int _pageIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final urls = widget.item.imageUrls.isNotEmpty
+        ? widget.item.imageUrls
+        : ['https://via.placeholder.com/800x1000.png?text=Sin+foto'];
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Seleccion de imagen')),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView.builder(
+                itemCount: urls.length,
+                onPageChanged: (i) => setState(() => _pageIndex = i),
+                itemBuilder: (_, index) => Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.network(
+                      urls[index],
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (urls.length > 1)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _Dots(count: urls.length, index: _pageIndex),
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: widget.onOpenDetail,
+                  child: const Text('Volver al detalle'),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -172,11 +280,15 @@ class _DetailHeader extends StatelessWidget {
 class _Gallery extends StatelessWidget {
   final List<String> imageUrls;
   final double height;
+  final bool isFavorited;
+  final VoidCallback onToggleFavorite;
   final ValueChanged<int> onPageChanged;
 
   const _Gallery({
     required this.imageUrls,
     required this.height,
+    required this.isFavorited,
+    required this.onToggleFavorite,
     required this.onPageChanged,
   });
 
@@ -190,6 +302,8 @@ class _Gallery extends StatelessWidget {
       return _ImageCard(
         url: safeUrls.first,
         height: height,
+        isFavorited: isFavorited,
+        onToggleFavorite: onToggleFavorite,
       );
     }
 
@@ -201,6 +315,8 @@ class _Gallery extends StatelessWidget {
         itemBuilder: (context, index) => _ImageCard(
           url: safeUrls[index],
           height: height,
+          isFavorited: isFavorited,
+          onToggleFavorite: onToggleFavorite,
         ),
       ),
     );
@@ -210,10 +326,14 @@ class _Gallery extends StatelessWidget {
 class _ImageCard extends StatelessWidget {
   final String url;
   final double height;
+  final bool isFavorited;
+  final VoidCallback onToggleFavorite;
 
   const _ImageCard({
     required this.url,
     required this.height,
+    required this.isFavorited,
+    required this.onToggleFavorite,
   });
 
   @override
@@ -233,10 +353,30 @@ class _ImageCard extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Image.network(
-        url,
-        fit: BoxFit.cover,
-        width: double.infinity,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.network(
+              url,
+              fit: BoxFit.cover,
+              width: double.infinity,
+            ),
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: FavoriteHeartButton(
+                filled: isFavorited,
+                onTap: onToggleFavorite,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

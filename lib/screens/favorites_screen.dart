@@ -30,6 +30,7 @@ class FavoritesScreen extends StatefulWidget {
 class _FavoritesScreenState extends State<FavoritesScreen> {
   String? _activeTagType;
   String? _activeTagValue;
+  int _cardResetSignal = 0;
 
   @override
   void initState() {
@@ -90,6 +91,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
   }
 
+  bool _isCardFocused(Map<String, dynamic> item) {
+    if (_activeTagType == null || _activeTagValue == null) return true;
+    return _matchesActiveTag(item);
+  }
+
   NidoItem _toNidoItem(Map<String, dynamic> it,
       {List<NidoItem> recommended = const []}) {
     return NidoItem(
@@ -106,24 +112,65 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 
-  List<NidoItem> _recommendedFor(Map<String, dynamic> base) {
-    final others = widget.items.where((x) => x['id'] != base['id']).toList();
+  Map<String, dynamic>? _findItemById(String id) {
+    for (final item in widget.items) {
+      if (item['id'] == id) return item;
+    }
+    return null;
+  }
+
+  List<NidoItem> _recommendedFor(String baseId) {
+    final others = widget.items.where((x) => x['id'] != baseId).toList();
     final subset = others.take(8).toList();
     return subset.map((e) => _toNidoItem(e)).toList();
   }
 
-  Route _buildDetailRoute(NidoItem item) {
+  NidoItem? _buildItemWithRecommendations(String id) {
+    final raw = _findItemById(id);
+    if (raw == null) return null;
+    final recommended = _recommendedFor(id);
+    return _toNidoItem(raw, recommended: recommended);
+  }
+
+  Route _buildDetailRoute(String itemId) {
     return PageRouteBuilder(
       transitionDuration: const Duration(milliseconds: 450),
-      pageBuilder: (context, _, __) => ItemDetailScreen(
-        item: item,
-        onBack: () => Navigator.of(context).pop(),
-        onChat: (it) {},
-        onBuy: (it) {},
-        onOpenRecommended: (it) {
-          Navigator.of(context).push(_buildDetailRoute(it));
-        },
-      ),
+      pageBuilder: (context, _, __) {
+        final item = _buildItemWithRecommendations(itemId);
+        if (item == null) {
+          return const Scaffold(
+            body: SafeArea(
+              child: Center(child: Text('Producto no disponible')),
+            ),
+          );
+        }
+        return ItemDetailScreen(
+          item: item,
+          onBack: () => Navigator.of(context).pop(),
+          onBackToHome: () =>
+              Navigator.of(context).popUntil((route) => route.isFirst),
+          onBackToImageSelection: (it) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ItemImageSelectionScreen(
+                  item: it,
+                  onOpenDetail: () => Navigator.of(context).pop(),
+                ),
+              ),
+            );
+          },
+          onToggleFavorite: (id) {
+            widget.onToggleFavorite(id);
+            setState(() {});
+          },
+          onChat: (it) {},
+          onBuy: (it) {},
+          onOpenRecommended: (it) {
+            Navigator.of(context).push(_buildDetailRoute(it.id));
+          },
+          isFavorited: (_findItemById(item.id)?['fav'] as bool?) ?? false,
+        );
+      },
       transitionsBuilder: (_, animation, __, child) {
         final curved =
             CurvedAnimation(parent: animation, curve: Curves.easeOut);
@@ -132,11 +179,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 
-  Future<void> _openDetailFromBack(Map<String, dynamic> it) async {
-    final rec = _recommendedFor(it);
-    final nidoItem = _toNidoItem(it, recommended: rec);
-    await Navigator.of(context).push(_buildDetailRoute(nidoItem));
-    setState(() {});
+  Future<void> _openDetailFromImageTap(Map<String, dynamic> it) async {
+    final itemId = it['id'] as String;
+    await Navigator.of(context).push(_buildDetailRoute(itemId));
+    if (!mounted) return;
+    setState(() => _cardResetSignal++);
   }
 
   @override
@@ -184,11 +231,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       isFavorited: (it['fav'] as bool?) == true,
                       onFavoriteTap: () =>
                           _toggleFavAndRefresh(it['id'] as String),
-                      isFocused: _matchesActiveTag(it),
+                      isFocused: _isCardFocused(it),
                       backTitle: it['title'] as String?,
                       backSize: it['size'] as String?,
                       backInquiries: it['q'] as int?,
-                      onOpenBack: () => _openDetailFromBack(it),
+                      resetSignal: _cardResetSignal,
+                      onOpenDetailFromImageTap: () =>
+                          _openDetailFromImageTap(it),
                     );
                   },
                 );

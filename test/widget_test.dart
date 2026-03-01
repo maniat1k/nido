@@ -1,31 +1,39 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nido/app.dart';
 
-//import 'package:nido/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  Future<void> _pumpAppWithSize(
+    WidgetTester tester, {
+    required Size size,
+  }) async {
+    // Simula el tamaño de pantalla (viewport) del dispositivo.
+    await tester.binding.setSurfaceSize(size);
+
+    // IMPORTANTE: al terminar, volver a null para no contaminar otros tests.
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+
+    // Build de la app completa.
     await tester.pumpWidget(const NidoApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Deja que se asienten frames/animaciones iniciales.
+    await tester.pumpAndSettle();
+  }
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('NidoApp renderiza sin excepciones en teléfono', (tester) async {
+    // Ejemplo teléfono (logical px). Podés cambiarlo por el que uses.
+    await _pumpAppWithSize(tester, size: const Size(390, 844)); // iPhone 12/13
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Si hubo overflow/layout exception, aparece acá.
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('NidoApp renderiza sin excepciones en tablet', (tester) async {
+    // Ejemplo tablet
+    await _pumpAppWithSize(tester, size: const Size(1024, 768)); // iPad landscape
+
+    expect(tester.takeException(), isNull);
   });
 }

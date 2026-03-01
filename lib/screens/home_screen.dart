@@ -18,6 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _activeBadgeOrder;
   String? _activePriceTextOrder;
   num? _activePriceAnchor;
+  int _cardResetSignal = 0;
 
   // Seed data (fake)
   late final List<Map<String, dynamic>> _items = [
@@ -383,24 +384,67 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  List<NidoItem> _recommendedFor(Map<String, dynamic> base) {
-    final others = _items.where((x) => x['id'] != base['id']).toList();
+  bool _isCardFocused(Map<String, dynamic> item) {
+    if (_activeTagType == null || _activeTagValue == null) return true;
+    return _matchesActiveTag(item);
+  }
+
+  Map<String, dynamic>? _findItemById(String id) {
+    for (final item in _items) {
+      if (item['id'] == id) return item;
+    }
+    return null;
+  }
+
+  List<NidoItem> _recommendedFor(String baseId) {
+    final others = _items.where((x) => x['id'] != baseId).toList();
     final subset = others.take(8).toList();
     return subset.map((e) => _toNidoItem(e)).toList();
   }
 
-  Route _buildDetailRoute(NidoItem item) {
+  NidoItem? _buildItemWithRecommendations(String id) {
+    final raw = _findItemById(id);
+    if (raw == null) return null;
+    final recommended = _recommendedFor(id);
+    return _toNidoItem(raw, recommended: recommended);
+  }
+
+  Route _buildDetailRoute(String itemId) {
     return PageRouteBuilder(
       transitionDuration: const Duration(milliseconds: 450),
-      pageBuilder: (context, _, __) => ItemDetailScreen(
-        item: item,
-        onBack: () => Navigator.of(context).pop(),
-        onChat: (it) {},
-        onBuy: (it) {},
-        onOpenRecommended: (it) {
-          Navigator.of(context).push(_buildDetailRoute(it));
-        },
-      ),
+      pageBuilder: (context, _, __) {
+        final item = _buildItemWithRecommendations(itemId);
+        if (item == null) {
+          return const Scaffold(
+            body: SafeArea(
+              child: Center(child: Text('Producto no disponible')),
+            ),
+          );
+        }
+        return ItemDetailScreen(
+          item: item,
+          onBack: () => Navigator.of(context).pop(),
+          onBackToHome: () =>
+              Navigator.of(context).popUntil((route) => route.isFirst),
+          onBackToImageSelection: (it) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ItemImageSelectionScreen(
+                  item: it,
+                  onOpenDetail: () => Navigator.of(context).pop(),
+                ),
+              ),
+            );
+          },
+          onToggleFavorite: (id) => _toggleFavorite(id),
+          onChat: (it) {},
+          onBuy: (it) {},
+          onOpenRecommended: (it) {
+            Navigator.of(context).push(_buildDetailRoute(it.id));
+          },
+          isFavorited: (_findItemById(item.id)?['fav'] as bool?) ?? false,
+        );
+      },
       transitionsBuilder: (_, animation, __, child) {
         final curved =
             CurvedAnimation(parent: animation, curve: Curves.easeOut);
@@ -409,10 +453,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openDetailFromBack(Map<String, dynamic> item) {
-    final rec = _recommendedFor(item);
-    final nidoItem = _toNidoItem(item, recommended: rec);
-    Navigator.of(context).push(_buildDetailRoute(nidoItem));
+  Future<void> _openDetailFromImageTap(Map<String, dynamic> item) async {
+    final itemId = item['id'] as String;
+    await Navigator.of(context).push(_buildDetailRoute(itemId));
+    if (!mounted) return;
+    setState(() => _cardResetSignal++);
   }
 
   @override
@@ -533,11 +578,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   badgeSelected: _activeBadgeOrder == (item['badge'] as String?),
                   priceSelected:
                       _activePriceTextOrder == (item['price'] as String),
-                  isFocused: _matchesActiveTag(item),
+                  isFocused: _isCardFocused(item),
                   backTitle: item['title'] as String?,
                   backSize: item['size'] as String?,
                   backInquiries: item['q'] as int?,
-                  onOpenBack: () => _openDetailFromBack(item),
+                  resetSignal: _cardResetSignal,
+                  onOpenDetailFromImageTap: () =>
+                      _openDetailFromImageTap(item),
                 );
               },
             );
