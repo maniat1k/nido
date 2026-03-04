@@ -1,16 +1,31 @@
-# nido
+# Nido
 
-A new Flutter project.
+Nido es una aplicación móvil enfocada en la compra y venta de ropa y accesorios de bebé entre familias.
 
-## Getting Started
+## 🎯 Problema
 
-This project is a starting point for a Flutter application.
+La ropa de bebé tiene una vida útil muy corta. Muchas prendas se usan pocas veces antes de quedar fuera de talla.
 
-A few resources to get you started if this is your first Flutter project:
+## 💡 Solución
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Un marketplace móvil simple, visual y rápido que permite:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Explorar prendas disponibles
+- Guardar favoritos
+- Ver detalles
+- Contactar al vendedor
+- Publicar artículos (en desarrollo)
+
+## 🚀 Estado actual
+
+MVP navegable en desarrollo.
+
+## 🧱 Stack tecnológico
+
+- Flutter
+- Dart
+- Arquitectura modular (evolutiva)
+
+## 📍 Roadmap
+
+Ver `ROADMAP.md`
