@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
 
-import '../data/items_repository.dart';
-import '../models/nido_item.dart';
-import '../widgets/polaroid_item_card.dart';
+import '../models/item.dart';
+import '../repositories/items_repository.dart';
+import '../widgets/item_card.dart';
+import 'create_item_screen.dart';
 import 'favorites_screen.dart';
 import 'item_detail_screen.dart';
+import 'my_items_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final ItemsRepository repository;
+
+  const HomeScreen({
+    super.key,
+    required this.repository,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final ItemsRepository _repository = const ItemsRepository();
-
   String? _activeTagType;
   String? _activeTagValue;
   String? _activeBadgeOrder;
@@ -23,12 +28,18 @@ class _HomeScreenState extends State<HomeScreen> {
   num? _activePriceAnchor;
   int _cardResetSignal = 0;
 
-  late final List<NidoItem> _items = _repository.getAllItems();
+  List<Item> get _items => widget.repository.getAllItems();
 
   int get _favCount => _items.where((item) => item.isFavorite).length;
 
+  String _formatPrice(double price) {
+    if (price <= 0) return 'Consultar';
+    final isInt = price == price.roundToDouble();
+    return isInt ? '\$ ${price.toInt()}' : '\$ ${price.toStringAsFixed(2)}';
+  }
+
   List<({String type, String value, int count})> get _tagStats {
-    final Map<String, int> counts = {};
+    final counts = <String, int>{};
 
     void add(String type, String value) {
       final key = '$type::$value';
@@ -36,14 +47,16 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     for (final item in _items) {
-      add('type', item.type);
-      add('age', item.age);
-      add('cond', item.condition);
+      add('category', item.category);
+      if (item.ageSuggested != null && item.ageSuggested!.isNotEmpty) {
+        add('age', item.ageSuggested!);
+      }
+      add('condition', item.condition);
     }
 
-    final rows = counts.entries.map((e) {
-      final parts = e.key.split('::');
-      return (type: parts[0], value: parts[1], count: e.value);
+    final rows = counts.entries.map((entry) {
+      final parts = entry.key.split('::');
+      return (type: parts[0], value: parts[1], count: entry.value);
     }).toList();
 
     rows.sort((a, b) {
@@ -57,31 +70,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _tagTypeLabel(String type) {
     switch (type) {
-      case 'type':
-        return 'Tipo';
+      case 'category':
+        return 'Categoría';
       case 'age':
         return 'Edad';
-      case 'cond':
+      case 'condition':
         return 'Estado';
       default:
         return type;
     }
-  }
-
-  NidoItem? _findItemById(String id) {
-    for (final item in _items) {
-      if (item.id == id) return item;
-    }
-    return null;
-  }
-
-  void _toggleFavorite(String id) {
-    setState(() {
-      final idx = _items.indexWhere((item) => item.id == id);
-      if (idx == -1) return;
-      final current = _items[idx];
-      _items[idx] = current.copyWith(isFavorite: !current.isFavorite);
-    });
   }
 
   void _setTagFilter({required String type, required String value}) {
@@ -149,28 +146,28 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  bool _matchesActiveTag(NidoItem item) {
+  bool _matchesActiveTag(Item item) {
     if (_activeTagType == null || _activeTagValue == null) return false;
     switch (_activeTagType) {
-      case 'type':
-        return item.type == _activeTagValue;
+      case 'category':
+        return item.category == _activeTagValue;
       case 'age':
-        return item.age == _activeTagValue;
-      case 'cond':
+        return item.ageSuggested == _activeTagValue;
+      case 'condition':
         return item.condition == _activeTagValue;
       default:
         return false;
     }
   }
 
-  bool _isCardFocused(NidoItem item) {
+  bool _isCardFocused(Item item) {
     if (_activeTagType == null || _activeTagValue == null) return true;
     return _matchesActiveTag(item);
   }
 
-  List<NidoItem> get _visibleItems {
+  List<Item> get _visibleItems {
     final list = (_activeTagType == null || _activeTagValue == null)
-        ? <NidoItem>[..._items]
+        ? <Item>[..._items]
         : _items.where(_matchesActiveTag).toList();
 
     final indexById = <String, int>{
@@ -185,8 +182,8 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       if (_activePriceAnchor != null) {
-        final aPrice = _parsePrice(a.price);
-        final bPrice = _parsePrice(b.price);
+        final aPrice = _parsePrice(_formatPrice(a.price));
+        final bPrice = _parsePrice(_formatPrice(b.price));
         final aGroup = _priceGroup(aPrice, _activePriceAnchor!);
         final bGroup = _priceGroup(bPrice, _activePriceAnchor!);
         if (aGroup != bGroup) return aGroup.compareTo(bGroup);
@@ -202,226 +199,189 @@ class _HomeScreenState extends State<HomeScreen> {
     return list;
   }
 
-  void _openFavorites() {
-    Navigator.of(context).push(
+  Future<void> _openFavorites() {
+    return Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => FavoritesScreen(
-          items: _items,
-          onToggleFavorite: _toggleFavorite,
-          onTagTap: (type, value) => _setTagFilter(type: type, value: value),
-          activeTagType: _activeTagType,
-          activeTagValue: _activeTagValue,
+        builder: (_) => FavoritesScreen(repository: widget.repository),
+      ),
+    );
+  }
+
+  Future<void> _openMyItems() {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MyItemsScreen(repository: widget.repository),
+      ),
+    );
+  }
+
+  Future<void> _openPublish() async {
+    final itemId = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => CreateItemScreen(repository: widget.repository),
+      ),
+    );
+
+    if (!mounted || itemId == null) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ItemDetailScreen(
+          itemId: itemId,
+          repository: widget.repository,
         ),
       ),
     );
+    if (!mounted) return;
+    setState(() => _cardResetSignal++);
   }
 
-  void _openPublish() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Publicar'),
-        content:
-            const Text('Aquí comenzará el flujo de publicación (Paso 1: Fotos).'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
+  Future<void> _openDetail(Item item) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ItemDetailScreen(
+          itemId: item.id,
+          repository: widget.repository,
+        ),
       ),
     );
-  }
-
-  List<NidoItem> _recommendedFor(NidoItem baseItem) {
-    final seedRelated = _repository.getRelatedItems(baseItem, limit: 8);
-    return seedRelated
-        .map((seedItem) => _findItemById(seedItem.id) ?? seedItem)
-        .toList();
-  }
-
-  NidoItem? _buildItemWithRecommendations(String id) {
-    final item = _findItemById(id);
-    if (item == null) return null;
-    return item.copyWith(recommended: _recommendedFor(item));
-  }
-
-  Route _buildDetailRoute(String itemId) {
-    return PageRouteBuilder(
-      transitionDuration: const Duration(milliseconds: 450),
-      pageBuilder: (context, _, __) {
-        final item = _buildItemWithRecommendations(itemId);
-        if (item == null) {
-          return const Scaffold(
-            body: SafeArea(
-              child: Center(child: Text('Producto no disponible')),
-            ),
-          );
-        }
-        return ItemDetailScreen(
-          item: item,
-          onBack: () => Navigator.of(context).pop(),
-          onBackToHome: () =>
-              Navigator.of(context).popUntil((route) => route.isFirst),
-          onBackToImageSelection: (it) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => ItemImageSelectionScreen(
-                  item: it,
-                  onOpenDetail: () => Navigator.of(context).pop(),
-                ),
-              ),
-            );
-          },
-          onToggleFavorite: _toggleFavorite,
-          onChat: (it) {},
-          onBuy: (it) {},
-          onOpenRecommended: (it) {
-            Navigator.of(context).push(_buildDetailRoute(it.id));
-          },
-          isFavorited: (_findItemById(item.id)?.isFavorite) ?? false,
-        );
-      },
-      transitionsBuilder: (_, animation, __, child) {
-        final curved =
-            CurvedAnimation(parent: animation, curve: Curves.easeOut);
-        return FadeTransition(opacity: curved, child: child);
-      },
-    );
-  }
-
-  Future<void> _openDetailFromImageTap(NidoItem item) async {
-    await Navigator.of(context).push(_buildDetailRoute(item.id));
     if (!mounted) return;
     setState(() => _cardResetSignal++);
   }
 
   @override
   Widget build(BuildContext context) {
-    final items = _visibleItems;
+    return AnimatedBuilder(
+      animation: widget.repository,
+      builder: (context, _) {
+        final items = _visibleItems;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8EFF4),
-      appBar: AppBar(
-        title: PopupMenuButton<(String, String)>(
-          tooltip: 'Filtrar por etiquetas',
-          onSelected: (value) {
-            _setTagFilter(type: value.$1, value: value.$2);
-          },
-          itemBuilder: (context) {
-            return _tagStats
-                .map(
-                  (tag) => PopupMenuItem<(String, String)>(
-                    value: (tag.type, tag.value),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${tag.value} · ${_tagTypeLabel(tag.type)}',
-                            overflow: TextOverflow.ellipsis,
-                          ),
+        return Scaffold(
+          backgroundColor: const Color(0xFFF8EFF4),
+          appBar: AppBar(
+            title: PopupMenuButton<(String, String)>(
+              tooltip: 'Filtrar por etiquetas',
+              onSelected: (value) {
+                _setTagFilter(type: value.$1, value: value.$2);
+              },
+              itemBuilder: (context) {
+                return _tagStats
+                    .map(
+                      (tag) => PopupMenuItem<(String, String)>(
+                        value: (tag.type, tag.value),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${tag.value} · ${_tagTypeLabel(tag.type)}',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${tag.count}',
+                              style: TextStyle(
+                                color: Colors.black.withValues(alpha: 0.6),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            if (_activeTagType == tag.type &&
+                                _activeTagValue == tag.value) ...[
+                              const SizedBox(width: 8),
+                              const Icon(Icons.check, size: 18),
+                            ],
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${tag.count}',
-                          style: TextStyle(
-                            color: Colors.black.withValues(alpha: 0.6),
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        if (_activeTagType == tag.type &&
-                            _activeTagValue == tag.value) ...[
-                          const SizedBox(width: 8),
-                          const Icon(Icons.check, size: 18),
-                        ],
-                      ],
-                    ),
+                      ),
+                    )
+                    .toList();
+              },
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Nido',
+                    style: TextStyle(fontWeight: FontWeight.w800),
                   ),
-                )
-                .toList();
-          },
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Nido',
-                style: TextStyle(fontWeight: FontWeight.w800),
+                  SizedBox(width: 4),
+                  Icon(Icons.expand_more, size: 20),
+                ],
               ),
-              SizedBox(width: 4),
-              Icon(Icons.expand_more, size: 20),
+            ),
+            actions: [
+              IconButton(
+                tooltip: 'Mis publicaciones',
+                onPressed: _openMyItems,
+                icon: const Icon(Icons.checkroom_outlined),
+              ),
+              if (_activeTagType != null && _activeTagValue != null)
+                IconButton(
+                  tooltip: 'Quitar filtro',
+                  icon: const Icon(Icons.filter_alt_off),
+                  onPressed: _clearFilterIfActive,
+                ),
+              if (_activeBadgeOrder != null || _activePriceAnchor != null)
+                IconButton(
+                  tooltip: 'Quitar orden',
+                  icon: const Icon(Icons.sort),
+                  onPressed: _clearOrderIfActive,
+                ),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: TextButton.icon(
+                  onPressed: _openFavorites,
+                  icon: const Icon(Icons.favorite_border),
+                  label: Text('($_favCount)'),
+                ),
+              ),
             ],
           ),
-        ),
-        actions: [
-          if (_activeTagType != null && _activeTagValue != null)
-            IconButton(
-              tooltip: 'Quitar filtro',
-              icon: const Icon(Icons.filter_alt_off),
-              onPressed: _clearFilterIfActive,
-            ),
-          if (_activeBadgeOrder != null || _activePriceAnchor != null)
-            IconButton(
-              tooltip: 'Quitar orden',
-              icon: const Icon(Icons.sort),
-              onPressed: _clearOrderIfActive,
-            ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: TextButton.icon(
-              onPressed: _openFavorites,
-              icon: const Icon(Icons.favorite_border),
-              label: Text('($_favCount)'),
-            ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: _openPublish,
+            icon: const Icon(Icons.add),
+            label: const Text('Publicar'),
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openPublish,
-        icon: const Icon(Icons.add),
-        label: const Text('Publicar'),
-      ),
-      body: GestureDetector(
-        behavior: HitTestBehavior.deferToChild,
-        onTap: _clearFilterIfActive,
-        child: LayoutBuilder(
-          builder: (context, c) {
-            final w = c.maxWidth;
+          body: GestureDetector(
+            behavior: HitTestBehavior.deferToChild,
+            onTap: _clearFilterIfActive,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final w = constraints.maxWidth;
+                final cols = w < 520 ? 2 : (w < 900 ? 3 : 4);
+                final spacing = w < 520 ? 10.0 : 12.0;
+                final aspect = w < 520 ? 0.78 : 0.68;
 
-            final int cols = w < 520 ? 2 : (w < 900 ? 3 : 4);
-            final double spacing = w < 520 ? 10 : 12;
-            final double aspect = w < 520 ? 0.78 : 0.68;
+                return GridView.builder(
+                  padding: EdgeInsets.all(spacing),
+                  itemCount: items.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: cols,
+                    crossAxisSpacing: spacing,
+                    mainAxisSpacing: spacing,
+                    childAspectRatio: aspect,
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    final priceLabel = _formatPrice(item.price);
 
-            return GridView.builder(
-              padding: EdgeInsets.all(spacing),
-              itemCount: items.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: cols,
-                crossAxisSpacing: spacing,
-                mainAxisSpacing: spacing,
-                childAspectRatio: aspect,
-              ),
-              itemBuilder: (context, index) {
-                final item = items[index];
-
-                return PolaroidItemCard(
-                  item: item,
-                  onFavoriteTap: () => _toggleFavorite(item.id),
-                  onBadgeTap: () => _toggleBadgeOrder(item.badge),
-                  onPriceTap: () => _togglePriceOrder(item.price),
-                  badgeSelected: _activeBadgeOrder == item.badge,
-                  priceSelected: _activePriceTextOrder == item.price,
-                  isFocused: _isCardFocused(item),
-                  backTitle: item.title,
-                  backSize: item.size,
-                  backInquiries: item.inquiryCount,
-                  resetSignal: _cardResetSignal,
-                  onOpenDetailFromImageTap: () => _openDetailFromImageTap(item),
+                    return ItemCard(
+                      item: item,
+                      priceLabel: priceLabel,
+                      onFavoriteTap: () => widget.repository.toggleFavorite(item.id),
+                      onBadgeTap: () => _toggleBadgeOrder(item.badge),
+                      onPriceTap: () => _togglePriceOrder(priceLabel),
+                      badgeSelected: _activeBadgeOrder == item.badge,
+                      priceSelected: _activePriceTextOrder == priceLabel,
+                      isFocused: _isCardFocused(item),
+                      resetSignal: _cardResetSignal,
+                      onOpenDetailFromImageTap: () => _openDetail(item),
+                    );
+                  },
                 );
               },
-            );
-          },
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

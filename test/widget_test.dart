@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nido/app.dart';
+import 'package:nido/repositories/items_repository.dart';
 
 Future<void> _pumpAppWithSize(
   WidgetTester tester, {
@@ -15,6 +16,7 @@ Future<void> _pumpAppWithSize(
   });
 
   // Render app (asumiendo que NidoApp ya envuelve MaterialApp)
+  ItemsRepository.instance.reset();
   await tester.pumpWidget(const NidoApp());
 
   // Asentá frames/animaciones iniciales
