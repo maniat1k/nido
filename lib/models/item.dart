@@ -83,4 +83,48 @@ class Item {
       lastActivity: lastActivity ?? this.lastActivity,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'price': price,
+      'category': category,
+      'size': size,
+      'condition': condition,
+      'sellerId': sellerId,
+      'imageUrls': imageUrls,
+      'isFavorite': isFavorite,
+      'brand': brand,
+      'color': color,
+      'ageSuggested': ageSuggested,
+      'tags': tags,
+      'badge': badge,
+      'inquiryCount': inquiryCount,
+      'lastActivity': lastActivity,
+    };
+  }
+
+  factory Item.fromJson(Map<String, dynamic> json) {
+    return Item(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String,
+      price: (json['price'] as num).toDouble(),
+      category: json['category'] as String,
+      size: json['size'] as String,
+      condition: json['condition'] as String,
+      sellerId: json['sellerId'] as String,
+      imageUrls: (json['imageUrls'] as List<dynamic>).cast<String>(),
+      isFavorite: json['isFavorite'] as bool? ?? false,
+      brand: json['brand'] as String?,
+      color: json['color'] as String?,
+      ageSuggested: json['ageSuggested'] as String?,
+      tags: ((json['tags'] as List<dynamic>?) ?? const <dynamic>[]).cast<String>(),
+      badge: json['badge'] as String?,
+      inquiryCount: json['inquiryCount'] as int? ?? 0,
+      lastActivity: json['lastActivity'] as String? ?? 'recién publicado',
+    );
+  }
 }

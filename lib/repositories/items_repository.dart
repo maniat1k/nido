@@ -1,16 +1,28 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/mock_items.dart';
+import '../data/mock_sellers.dart';
 import '../models/item.dart';
 
 class ItemsRepository extends ChangeNotifier {
   ItemsRepository._internal() : _items = List<Item>.from(mockItems);
 
   static final ItemsRepository instance = ItemsRepository._internal();
+  static const String _createdItemsStorageKey = 'created_items';
 
   final List<Item> _items;
+  bool _isInitialized = false;
+  Future<void>? _initializationFuture;
 
   factory ItemsRepository() => instance;
+
+  Future<void> initialize() {
+    return _initializationFuture ??= _loadPersistedItems();
+  }
 
   List<Item> getAllItems() => List<Item>.unmodifiable(_items);
 
@@ -51,6 +63,7 @@ class ItemsRepository extends ChangeNotifier {
   Item addItem(Item item) {
     _items.insert(0, item);
     notifyListeners();
+    unawaited(_persistCreatedItems());
     return item;
   }
 
@@ -63,6 +76,42 @@ class ItemsRepository extends ChangeNotifier {
     _items
       ..clear()
       ..addAll(mockItems);
+    _isInitialized = false;
+    _initializationFuture = null;
     notifyListeners();
+  }
+
+  Future<void> _loadPersistedItems() async {
+    if (_isInitialized) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final rawItems = prefs.getStringList(_createdItemsStorageKey) ?? const <String>[];
+    final persistedItems = <Item>[];
+
+    for (final raw in rawItems) {
+      try {
+        final decoded = jsonDecode(raw) as Map<String, dynamic>;
+        persistedItems.add(Item.fromJson(decoded));
+      } catch (_) {
+        // Ignore malformed persisted items and keep loading the rest.
+      }
+    }
+
+    _items
+      ..clear()
+      ..addAll(persistedItems)
+      ..addAll(mockItems);
+
+    _isInitialized = true;
+    notifyListeners();
+  }
+
+  Future<void> _persistCreatedItems() async {
+    final prefs = await SharedPreferences.getInstance();
+    final createdItems = _items
+        .where((item) => item.sellerId == currentMockSeller.id)
+        .map((item) => jsonEncode(item.toJson()))
+        .toList(growable: false);
+    await prefs.setStringList(_createdItemsStorageKey, createdItems);
   }
 }
