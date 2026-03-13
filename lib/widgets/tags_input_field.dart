@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'tag_chip.dart';
 
+const int kMaxTagsPerItem = 8;
+
 class TagsInputField extends StatefulWidget {
   final List<String> suggestedTags;
   final ValueChanged<List<String>> onChanged;
@@ -81,6 +83,9 @@ class _TagsInputFieldState extends State<TagsInputField> {
     var changed = false;
 
     for (final raw in values) {
+      if (_tags.length >= kMaxTagsPerItem) {
+        break;
+      }
       final normalized = _normalizeTag(raw);
       if (normalized.isEmpty || _containsTag(normalized)) {
         continue;
@@ -113,7 +118,7 @@ class _TagsInputFieldState extends State<TagsInputField> {
   void _toggleSuggestedTag(String tag) {
     if (_containsTag(tag)) {
       _tags.removeWhere((current) => _tagKey(current) == _tagKey(tag));
-    } else {
+    } else if (_tags.length < kMaxTagsPerItem) {
       _tags.add(_normalizeTag(tag));
     }
     _notify();
@@ -199,7 +204,7 @@ class _TagsInputFieldState extends State<TagsInputField> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Confirmá cada etiqueta con coma, enter o punto y coma.',
+          'Confirmá cada etiqueta con coma, enter o punto y coma. Máximo $kMaxTagsPerItem.',
           style: TextStyle(
             fontSize: 12,
             color: Colors.black.withValues(alpha: 0.58),

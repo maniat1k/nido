@@ -41,19 +41,21 @@ class CreateItemScreen extends StatelessWidget {
             ),
             child: ItemForm(
               currentSeller: currentMockSeller,
-              onSubmit: (result) {
+              onSubmit: (result) async {
                 final item = result.toItem(
                   _buildId(),
                   seller: currentMockSeller,
                 );
-                repository.addItem(item);
+                await repository.addItem(item);
 
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('${item.title} se publicó correctamente.'),
                   ),
                 );
 
+                if (!context.mounted) return;
                 Navigator.of(context).pop(item.id);
               },
             ),

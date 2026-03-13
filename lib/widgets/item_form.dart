@@ -83,7 +83,7 @@ class ItemFormResult {
 
 class ItemForm extends StatefulWidget {
   final Seller currentSeller;
-  final void Function(ItemFormResult value) onSubmit;
+  final Future<void> Function(ItemFormResult value) onSubmit;
 
   const ItemForm({
     super.key,
@@ -109,6 +109,7 @@ class _ItemFormState extends State<ItemForm> {
   String? _selectedCategory;
   String? _selectedCondition;
   List<String> _selectedTags = [];
+  bool _hasAttemptedSubmit = false;
 
   @override
   void initState() {
@@ -129,18 +130,32 @@ class _ItemFormState extends State<ItemForm> {
     super.dispose();
   }
 
-  void _submit() {
+  double? _parsePrice(String? raw) {
+    final value = (raw ?? '').trim();
+    if (value.isEmpty) return null;
+    return double.tryParse(value.replaceAll(',', '.'));
+  }
+
+  Future<void> _submit() async {
+    if (!_hasAttemptedSubmit) {
+      setState(() => _hasAttemptedSubmit = true);
+    }
+
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid || _selectedImage == null) {
-      setState(() {});
       return;
     }
 
-    widget.onSubmit(
+    final price = _parsePrice(_priceController.text);
+    if (price == null || price <= 0) {
+      return;
+    }
+
+    await widget.onSubmit(
       ItemFormResult(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        price: double.parse(_priceController.text.replaceAll(',', '.')),
+        price: price,
         category: _selectedCategory!,
         size: _sizeController.text.trim(),
         condition: _selectedCondition!,
@@ -160,7 +175,7 @@ class _ItemFormState extends State<ItemForm> {
 
   @override
   Widget build(BuildContext context) {
-    final imageMissing = _selectedImage == null;
+    final imageMissing = _hasAttemptedSubmit && _selectedImage == null;
 
     return Form(
       key: _formKey,
@@ -182,6 +197,7 @@ class _ItemFormState extends State<ItemForm> {
                 final url = mockImageOptions[index];
                 final selected = url == _selectedImage;
                 return GestureDetector(
+                  key: ValueKey('item-image-option-$index'),
                   onTap: () => setState(() => _selectedImage = url),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
@@ -197,7 +213,15 @@ class _ItemFormState extends State<ItemForm> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(14),
-                      child: Image.network(url, fit: BoxFit.cover),
+                      child: Image.network(
+                        url,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.image_not_supported_outlined),
+                        ),
+                      ),
                     ),
                   ),
                 );
@@ -229,8 +253,11 @@ class _ItemFormState extends State<ItemForm> {
             hint: 'Ej. 650',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             validator: (value) {
-              final parsed = double.tryParse((value ?? '').replaceAll(',', '.'));
+              final raw = (value ?? '').trim();
+              if (raw.isEmpty) return 'Ingresá el precio.';
+              final parsed = _parsePrice(raw);
               if (parsed == null) return 'Ingresá un precio válido.';
+              if (parsed <= 0) return 'El precio debe ser mayor a 0.';
               return null;
             },
           ),

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -60,10 +59,10 @@ class ItemsRepository extends ChangeNotifier {
     return updated;
   }
 
-  Item addItem(Item item) {
+  Future<Item> addItem(Item item) async {
     _items.insert(0, item);
+    await _persistCreatedItems();
     notifyListeners();
-    unawaited(_persistCreatedItems());
     return item;
   }
 
