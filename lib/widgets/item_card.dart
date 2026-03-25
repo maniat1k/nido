@@ -1,56 +1,45 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import '../models/nido_item.dart';
 
-class PolaroidItemCard extends StatefulWidget {
-  final NidoItem item;
+import '../models/item.dart';
 
+class ItemCard extends StatefulWidget {
+  final Item item;
   final VoidCallback? onFavoriteTap;
-
   final VoidCallback? onBadgeTap;
   final VoidCallback? onPriceTap;
   final bool badgeSelected;
   final bool priceSelected;
-
-  /// Tap en imagen: hace flip y abre detalle directo.
   final Future<void> Function()? onOpenDetailFromImageTap;
-
-  /// Permite al padre forzar el estado visual inicial.
   final int resetSignal;
-
-  final String? backTitle;
-  final String? backSize;
-  final int? backInquiries;
-
   final bool isFocused;
+  final String priceLabel;
 
-  const PolaroidItemCard({
+  const ItemCard({
     super.key,
     required this.item,
     required this.onFavoriteTap,
+    required this.priceLabel,
     this.onBadgeTap,
     this.onPriceTap,
     this.badgeSelected = false,
     this.priceSelected = false,
     this.onOpenDetailFromImageTap,
     this.resetSignal = 0,
-    this.backTitle,
-    this.backSize,
-    this.backInquiries,
     required this.isFocused,
   });
 
   @override
-  State<PolaroidItemCard> createState() => _PolaroidItemCardState();
+  State<ItemCard> createState() => _ItemCardState();
 }
 
-class _PolaroidItemCardState extends State<PolaroidItemCard> {
+class _ItemCardState extends State<ItemCard> {
   bool _flipped = false;
   bool _navigating = false;
 
   @override
-  void didUpdateWidget(covariant PolaroidItemCard oldWidget) {
+  void didUpdateWidget(covariant ItemCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.resetSignal != oldWidget.resetSignal && (_flipped || _navigating)) {
       setState(() {
@@ -128,15 +117,14 @@ class _PolaroidItemCardState extends State<PolaroidItemCard> {
                 right: 10,
                 child: Row(
                   children: [
-                    if (widget.item.badge != null &&
-                        widget.item.badge!.trim().isNotEmpty)
+                    if (widget.item.badge != null && widget.item.badge!.trim().isNotEmpty)
                       Expanded(
                         child: Align(
                           alignment: Alignment.centerLeft,
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
                             onTap: widget.onBadgeTap,
-                            child: _BadgePill(
+                            child: _Pill(
                               text: widget.item.badge!.trim(),
                               selected: widget.badgeSelected,
                             ),
@@ -157,19 +145,16 @@ class _PolaroidItemCardState extends State<PolaroidItemCard> {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: widget.onPriceTap,
-                  child: _PricePill(
-                    text: widget.item.price,
+                  child: _Pill(
+                    text: widget.priceLabel,
                     selected: widget.priceSelected,
+                    dense: true,
                   ),
                 ),
               ),
             ],
           ),
-          back: _BackCard(
-            title: widget.backTitle ?? widget.item.title,
-            size: widget.backSize ?? widget.item.size,
-            inquiries: widget.backInquiries ?? widget.item.inquiryCount,
-          ),
+          back: _BackCard(item: widget.item, priceLabel: widget.priceLabel),
         ),
       ),
     );
@@ -189,15 +174,13 @@ class _FlipCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const dur = Duration(milliseconds: 320);
-
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: flipped ? 1 : 0),
-      duration: dur,
+      duration: const Duration(milliseconds: 320),
       curve: Curves.easeInOut,
-      builder: (context, t, _) {
-        final angle = t * math.pi;
-        final isBack = t > 0.5;
+      builder: (context, value, _) {
+        final angle = value * math.pi;
+        final isBack = value > 0.5;
 
         return Transform(
           alignment: Alignment.center,
@@ -218,14 +201,12 @@ class _FlipCard extends StatelessWidget {
 }
 
 class _BackCard extends StatelessWidget {
-  final String title;
-  final String size;
-  final int inquiries;
+  final Item item;
+  final String priceLabel;
 
   const _BackCard({
-    required this.title,
-    required this.size,
-    required this.inquiries,
+    required this.item,
+    required this.priceLabel,
   });
 
   @override
@@ -242,15 +223,16 @@ class _BackCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            title,
+            item.title,
             style: const TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 15,
             ),
           ),
           const SizedBox(height: 8),
-          _BackRow(label: 'Talle', value: size),
-          _BackRow(label: 'Consultas', value: '$inquiries'),
+          _BackRow(label: 'Talle', value: item.size),
+          _BackRow(label: 'Precio', value: priceLabel),
+          _BackRow(label: 'Consultas', value: '${item.inquiryCount}'),
         ],
       ),
     );
@@ -261,7 +243,10 @@ class _BackRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _BackRow({required this.label, required this.value});
+  const _BackRow({
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -279,9 +264,12 @@ class _BackRow extends StatelessWidget {
               ),
             ),
           ),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w700),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -307,33 +295,31 @@ class FavoriteHeartButton extends StatefulWidget {
 
 class _FavoriteHeartButtonState extends State<FavoriteHeartButton>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
+  late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 520),
   );
 
   late final Animation<double> _pop = CurvedAnimation(
-    parent: _c,
-    curve: const Interval(0.0, 0.35, curve: Curves.easeOutBack),
+    parent: _controller,
+    curve: const Interval(0, 0.35, curve: Curves.easeOutBack),
   );
 
   late final Animation<double> _burst = CurvedAnimation(
-    parent: _c,
+    parent: _controller,
     curve: const Interval(0.05, 0.95, curve: Curves.easeOut),
   );
 
   @override
   void dispose() {
-    _c.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  void _trigger() => _c.forward(from: 0);
+  void _trigger() => _controller.forward(from: 0);
 
   @override
   Widget build(BuildContext context) {
-    final filled = widget.filled;
-
     return InkWell(
       borderRadius: BorderRadius.circular(999),
       onTap: () {
@@ -343,9 +329,9 @@ class _FavoriteHeartButtonState extends State<FavoriteHeartButton>
       child: Padding(
         padding: const EdgeInsets.all(6),
         child: AnimatedBuilder(
-          animation: _c,
+          animation: _controller,
           builder: (context, _) {
-            final s = 1.0 + (_pop.value * 0.20);
+            final scale = 1 + (_pop.value * 0.2);
             return Stack(
               alignment: Alignment.center,
               children: [
@@ -356,11 +342,12 @@ class _FavoriteHeartButtonState extends State<FavoriteHeartButton>
                   ),
                 ),
                 Transform.scale(
-                  scale: s,
+                  scale: scale,
                   child: Icon(
-                    filled ? Icons.favorite : Icons.favorite_border,
+                    widget.filled ? Icons.favorite : Icons.favorite_border,
                     size: widget.iconSize,
-                    color: filled ? const Color(0xFF6E3CBC) : Colors.black87,
+                    color:
+                        widget.filled ? const Color(0xFF6E3CBC) : Colors.black87,
                   ),
                 ),
               ],
@@ -374,6 +361,7 @@ class _FavoriteHeartButtonState extends State<FavoriteHeartButton>
 
 class _BurstDotsPainter extends CustomPainter {
   final double progress;
+
   const _BurstDotsPainter({required this.progress});
 
   @override
@@ -382,71 +370,46 @@ class _BurstDotsPainter extends CustomPainter {
 
     final center = Offset(size.width / 2, size.height / 2);
     final paint = Paint()..style = PaintingStyle.fill;
-
-    const dots = 7;
-    final maxR = size.shortestSide * 1.1;
-    final alpha = (1.0 - progress).clamp(0.0, 1.0);
+    final alpha = (1 - progress).clamp(0.0, 1.0);
 
     paint.color = const Color(0xFF6E3CBC).withValues(alpha: 0.65 * alpha);
 
-    for (int i = 0; i < dots; i++) {
-      final a = (i / dots) * math.pi * 2;
-      final r = (0.25 + 0.75 * progress) * maxR;
-      final p = center + Offset(math.cos(a) * r, math.sin(a) * r);
-      final dotSize = (1.0 - progress) * 2.2 + 1.1;
-      canvas.drawCircle(p, dotSize, paint);
+    const dots = 7;
+    final maxRadius = size.shortestSide * 1.1;
+
+    for (int index = 0; index < dots; index++) {
+      final angle = (index / dots) * math.pi * 2;
+      final distance = (0.25 + 0.75 * progress) * maxRadius;
+      final point = center + Offset(math.cos(angle) * distance, math.sin(angle) * distance);
+      final dotRadius = (1 - progress) * 2.2 + 1.1;
+      canvas.drawCircle(point, dotRadius, paint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _BurstDotsPainter oldDelegate) =>
-      oldDelegate.progress != progress;
-}
-
-class _PricePill extends StatelessWidget {
-  final String text;
-  final bool selected;
-  const _PricePill({required this.text, required this.selected});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: selected
-            ? const Color(0xFF6E3CBC).withValues(alpha: 0.92)
-            : Colors.white.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: selected
-              ? const Color(0xFF6E3CBC)
-              : Colors.black.withValues(alpha: 0.08),
-        ),
-      ),
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        softWrap: false,
-        style: TextStyle(
-          fontWeight: FontWeight.w900,
-          fontSize: 12,
-          color: selected ? Colors.white : Colors.black,
-        ),
-      ),
-    );
+  bool shouldRepaint(covariant _BurstDotsPainter oldDelegate) {
+    return oldDelegate.progress != progress;
   }
 }
 
-class _BadgePill extends StatelessWidget {
+class _Pill extends StatelessWidget {
   final String text;
   final bool selected;
-  const _BadgePill({required this.text, required this.selected});
+  final bool dense;
+
+  const _Pill({
+    required this.text,
+    required this.selected,
+    this.dense = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: dense ? 10 : 12,
+        vertical: dense ? 6 : 7,
+      ),
       decoration: BoxDecoration(
         color: selected
             ? const Color(0xFF6E3CBC).withValues(alpha: 0.92)
@@ -462,7 +425,6 @@ class _BadgePill extends StatelessWidget {
         text,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        softWrap: false,
         style: TextStyle(
           fontWeight: FontWeight.w900,
           fontSize: 12,
