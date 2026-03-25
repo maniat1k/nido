@@ -4,20 +4,33 @@ import 'package:nido/data/mock_sellers.dart';
 import 'package:nido/widgets/item_form.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   Future<void> pumpForm(
     WidgetTester tester, {
     required Future<void> Function(ItemFormResult value) onSubmit,
   }) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ItemForm(
-            currentSeller: currentMockSeller,
-            onSubmit: onSubmit,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: ItemForm(
+                currentSeller: currentMockSeller,
+                onSubmit: onSubmit,
+              ),
+            ),
           ),
         ),
       ),
     );
+    await tester.pumpAndSettle();
   }
 
   Future<void> fillRequiredFields(
@@ -30,7 +43,15 @@ void main() {
     await tester.enterText(fields.at(2), '3-6m');
     await tester.enterText(fields.at(3), 'Usado pocas veces.');
     await tester.tap(find.byKey(const ValueKey('item-image-option-0')));
-    await tester.pump();
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> tapSubmit(WidgetTester tester) async {
+    final submitButton = find.widgetWithText(ElevatedButton, 'Publicar prenda');
+    await tester.ensureVisible(submitButton);
+    await tester.pumpAndSettle();
+    await tester.tap(submitButton);
+    await tester.pumpAndSettle();
   }
 
   testWidgets('invalid price 0 blocks submit', (tester) async {
@@ -38,8 +59,7 @@ void main() {
     await pumpForm(tester, onSubmit: (_) async => submitted = true);
     await fillRequiredFields(tester, price: '0');
 
-    await tester.tap(find.text('Publicar prenda'));
-    await tester.pumpAndSettle();
+    await tapSubmit(tester);
 
     expect(find.text('El precio debe ser mayor a 0.'), findsOneWidget);
     expect(submitted, isFalse);
@@ -50,8 +70,7 @@ void main() {
     await pumpForm(tester, onSubmit: (_) async => submitted = true);
     await fillRequiredFields(tester, price: '-10');
 
-    await tester.tap(find.text('Publicar prenda'));
-    await tester.pumpAndSettle();
+    await tapSubmit(tester);
 
     expect(find.text('El precio debe ser mayor a 0.'), findsOneWidget);
     expect(submitted, isFalse);
@@ -62,8 +81,7 @@ void main() {
     await pumpForm(tester, onSubmit: (_) async => submitted = true);
     await fillRequiredFields(tester, price: 'abc');
 
-    await tester.tap(find.text('Publicar prenda'));
-    await tester.pumpAndSettle();
+    await tapSubmit(tester);
 
     expect(find.text('Ingresá un precio válido.'), findsOneWidget);
     expect(submitted, isFalse);
@@ -74,8 +92,7 @@ void main() {
     await pumpForm(tester, onSubmit: (value) async => submitted = value);
     await fillRequiredFields(tester, price: '650');
 
-    await tester.tap(find.text('Publicar prenda'));
-    await tester.pumpAndSettle();
+    await tapSubmit(tester);
 
     expect(submitted, isNotNull);
     expect(submitted!.price, 650);
@@ -86,8 +103,7 @@ void main() {
 
     expect(find.text('Elegí una foto principal para publicar.'), findsNothing);
 
-    await tester.tap(find.text('Publicar prenda'));
-    await tester.pumpAndSettle();
+    await tapSubmit(tester);
 
     expect(find.text('Elegí una foto principal para publicar.'), findsOneWidget);
   });

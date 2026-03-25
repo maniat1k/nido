@@ -272,24 +272,19 @@ class _ItemFormState extends State<ItemForm> {
             },
           ),
           const SizedBox(height: 14),
-          Row(
+          _ResponsiveFieldGroup(
             children: [
-              Expanded(
-                child: _DropdownField<String>(
-                  value: _selectedCategory,
-                  label: 'Categoría',
-                  items: kItemCategories,
-                  onChanged: (value) => setState(() => _selectedCategory = value),
-                ),
+              _DropdownField<String>(
+                value: _selectedCategory,
+                label: 'Categoría',
+                items: kItemCategories,
+                onChanged: (value) => setState(() => _selectedCategory = value),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _DropdownField<String>(
-                  value: _selectedCondition,
-                  label: 'Estado',
-                  items: kItemConditions,
-                  onChanged: (value) => setState(() => _selectedCondition = value),
-                ),
+              _DropdownField<String>(
+                value: _selectedCondition,
+                label: 'Estado',
+                items: kItemConditions,
+                onChanged: (value) => setState(() => _selectedCondition = value),
               ),
             ],
           ),
@@ -347,22 +342,17 @@ class _ItemFormState extends State<ItemForm> {
             hint: 'Ej. Carters',
           ),
           const SizedBox(height: 14),
-          Row(
+          _ResponsiveFieldGroup(
             children: [
-              Expanded(
-                child: _FormTextField(
-                  controller: _colorController,
-                  label: 'Color',
-                  hint: 'Ej. Beige',
-                ),
+              _FormTextField(
+                controller: _colorController,
+                label: 'Color',
+                hint: 'Ej. Beige',
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _FormTextField(
-                  controller: _ageSuggestedController,
-                  label: 'Edad sugerida',
-                  hint: 'Ej. 6-12m',
-                ),
+              _FormTextField(
+                controller: _ageSuggestedController,
+                label: 'Edad sugerida',
+                hint: 'Ej. 6-12m',
               ),
             ],
           ),
@@ -435,17 +425,69 @@ class _DropdownField<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<T>(
       initialValue: value,
+      isExpanded: true,
       decoration: _inputDecoration(label),
       items: items
           .map(
             (item) => DropdownMenuItem<T>(
               value: item,
-              child: Text('$item'),
+              child: Text(
+                '$item',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           )
           .toList(),
+      selectedItemBuilder: (context) {
+        return items
+            .map(
+              (item) => Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '$item',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            )
+            .toList();
+      },
       onChanged: onChanged,
       validator: (value) => value == null ? 'Campo obligatorio.' : null,
+    );
+  }
+}
+
+class _ResponsiveFieldGroup extends StatelessWidget {
+  final List<Widget> children;
+
+  const _ResponsiveFieldGroup({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 360) {
+          return Column(
+            children: [
+              for (int index = 0; index < children.length; index++) ...[
+                children[index],
+                if (index < children.length - 1) const SizedBox(height: 12),
+              ],
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            for (int index = 0; index < children.length; index++) ...[
+              Expanded(child: children[index]),
+              if (index < children.length - 1) const SizedBox(width: 12),
+            ],
+          ],
+        );
+      },
     );
   }
 }

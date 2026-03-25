@@ -40,8 +40,9 @@ void main() {
     await tester.enterText(find.byType(TextField), 'invierno,');
     await tester.pump();
 
-    expect(find.text('Invierno'), findsOneWidget);
-    expect(find.text('invierno'), findsNothing);
+    expect(currentTags, hasLength(1));
+    expect(currentTags.single, 'Invierno');
+    expect(find.byType(InputChip), findsOneWidget);
     expect(currentTags, ['Invierno']);
   });
 
